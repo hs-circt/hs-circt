@@ -90,6 +90,7 @@ inline void registerAllDialects(mlir::DialectRegistry &registry) {
     sv::SVDialect,
     systemc::SystemCDialect,
     verif::VerifDialect
+    gtech::GtechDialect
   >();
   // clang-format on
 }
