@@ -48,6 +48,7 @@
 #include "circt/Dialect/Sim/SimDialect.h"
 #include "circt/Dialect/SystemC/SystemCDialect.h"
 #include "circt/Dialect/Verif/VerifDialect.h"
+#include "circt/Dialect/VFC/VFCDialect.h"
 #include "mlir/IR/Dialect.h"
 
 namespace circt {
@@ -89,7 +90,8 @@ inline void registerAllDialects(mlir::DialectRegistry &registry) {
     ssp::SSPDialect,
     sv::SVDialect,
     systemc::SystemCDialect,
-    verif::VerifDialect
+    verif::VerifDialect,
+    vfc::VFCDialect
   >();
   // clang-format on
 }
