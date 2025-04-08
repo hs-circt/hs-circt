@@ -169,6 +169,36 @@ protected:
     return result;
   }
 
+  bool isVisibleChar(char c) {
+    return !isspace(c) && !iscntrl(c) && c != '\n' && c != '\r' && c != '\t';
+  }
+
+  // Compare the expected and actual IR without whitespace
+  void compareIR(const std::string &expected, const std::string &actual) {
+    // Remove all whitespace from both strings
+    std::stringstream canonizationExpected, canonizationActual;
+    bool lastWasVisible = false;
+    for (char c : expected) {
+      if (isVisibleChar(c)) {
+        canonizationExpected << c;
+        lastWasVisible = true;
+      } else if (lastWasVisible) {
+        canonizationExpected << ' ';
+        lastWasVisible = false;
+      }
+    }
+    for (char c : actual) {
+      if (isVisibleChar(c)) {
+        canonizationActual << c;
+        lastWasVisible = true;
+      } else if (lastWasVisible) {
+        canonizationActual << ' ';
+        lastWasVisible = false;
+      }
+    }
+    EXPECT_EQ(canonizationExpected.str(), canonizationActual.str());
+  }
+
   DialectRegistry registry;
   std::unique_ptr<MLIRContext> context;
 };
@@ -177,39 +207,52 @@ protected:
 TEST_F(XlnxLutTest, SingleLut) {
   auto module = createSingleLutModule();
   std::string ir = verifyAndPrint(module);
-  
-  // Verify that the output contains the correct module name
-  EXPECT_TRUE(ir.find("hw.module @SingleLutModule") != std::string::npos);
-  
-  // Verify that the output contains the correct LUT operation
-  EXPECT_TRUE(ir.find("xlnx.lutn") != std::string::npos);
-  EXPECT_TRUE(ir.find("INIT = 8") != std::string::npos);
+
+  std::string expected =
+  "module {\n"
+  "  hw.module @SingleLutModule(in %a : i1, in %b : i1, out out : i1) {\n"
+  "    %0 = xlnx.lutn(%a, %b) {INIT = 8 : ui64} : (i1, i1) -> i1\n"
+  "    hw.output %0 : i1\n"
+  "  }\n"
+  "}\n";
+
+  // Compare the expected and actual IR without whitespace
+  compareIR(expected, ir);
 }
 
 // Test the construction of cascaded LUTs
 TEST_F(XlnxLutTest, SerialLuts) {
   auto module = createSerialLutsModule();
   std::string ir = verifyAndPrint(module);
-  
-  // Verify that the output contains the correct module name
-  EXPECT_TRUE(ir.find("hw.module @SerialLutsModule") != std::string::npos);
-  
-  // Verify that the output contains two LUT operations, an AND gate and an OR gate
-  EXPECT_TRUE(ir.find("INIT = 8") != std::string::npos);
-  EXPECT_TRUE(ir.find("INIT = 14") != std::string::npos);
+  std::string expected =
+  "module {\n"
+  "  hw.module @SerialLutsModule(in %a : i1, in %b : i1, in %c : i1, out out : i1) {\n"
+  "    %0 = xlnx.lutn(%a, %b) {INIT = 8 : ui64} : (i1, i1) -> i1\n"
+  "    %1 = xlnx.lutn(%0, %c) {INIT = 14 : ui64} : (i1, i1) -> i1\n"
+  "    hw.output %1 : i1\n"
+  "  }\n"
+  "}\n";
+
+  // Compare the expected and actual IR without whitespace
+  compareIR(expected, ir);
 }
+
 
 // Test the construction of parallel LUTs
 TEST_F(XlnxLutTest, ParallelLuts) {
   auto module = createParallelLutsModule();
   std::string ir = verifyAndPrint(module);
+  std::string expected =
+  "module {\n"
+  "  hw.module @ParallelLutsModule(in %a : i1, in %b : i1, in %c : i1, in %d : i1, out out1 : i1, out out2 : i1) {\n"
+  "    %0 = xlnx.lutn(%a, %b) {INIT = 8 : ui64} : (i1, i1) -> i1\n"
+  "    %1 = xlnx.lutn(%c, %d) {INIT = 14 : ui64} : (i1, i1) -> i1\n"
+  "    hw.output %0, %1 : i1, i1\n"
+  "  }\n"
+  "}\n";
   
-  // Verify that the output contains the correct module name
-  EXPECT_TRUE(ir.find("hw.module @ParallelLutsModule") != std::string::npos);
-  
-  // Verify that the output contains two LUT operations, an AND gate and an OR gate
-  EXPECT_TRUE(ir.find("INIT = 8") != std::string::npos);
-  EXPECT_TRUE(ir.find("INIT = 14") != std::string::npos);
+  // Compare the expected and actual IR without whitespace
+  compareIR(expected, ir);
 }
 
 } // namespace 
