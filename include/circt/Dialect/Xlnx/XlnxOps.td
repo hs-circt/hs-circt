@@ -18,7 +18,7 @@ class XlnxOp<string mnemonic, list<Trait> traits = []> : Op<XlnxDialect, mnemoni
 // LUT Operation
 //===----------------------------------------------------------------------===//
 
-def XlnxNLutOp : XlnxOp<"nlut", [Commutative]> {
+def XlnxLutNOp : XlnxOp<"lutn", [Commutative]> {
   let summary = "Lookup table operation";
   let description = [{
     Lookup table operation with a single output bit. The INIT attribute defines 
@@ -28,9 +28,9 @@ def XlnxNLutOp : XlnxOp<"nlut", [Commutative]> {
     Example:
     ```mlir
     // 2-input AND gate
-    %result = xlnx.nlut(%a, %b) <{INIT = 8 : ui64}> : (i1, i1) -> i1
+    %result = xlnx.lutn(%a, %b) <{INIT = 8 : ui64}> : (i1, i1) -> i1
     // 3-input OR gate  
-    %result = xlnx.nlut(%a, %b, %c) <{INIT = 254 : ui64}> : (i1, i1, i1) -> i1
+    %result = xlnx.lutn(%a, %b, %c) <{INIT = 254 : ui64}> : (i1, i1, i1) -> i1
     ```
 
     The number of inputs must be between 1 and 6 inclusive.
