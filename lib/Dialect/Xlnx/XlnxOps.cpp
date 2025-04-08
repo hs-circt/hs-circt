@@ -12,6 +12,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LLVM.h"
+#include <cassert>
 
 using namespace mlir;
 using namespace circt;
@@ -21,17 +22,11 @@ using namespace circt::xlnx;
 // XlnxLutNOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult XlnxLutNOp::verify() {
-  // Verify that the number of inputs is within the valid range (1-6)
-  size_t numInputs = getInputs().size();
+static LogicalResult commonVerify(uint32_t numInputs, uint64_t initValue, InFlightDiagnostic &&diag) {
   if (numInputs < 1 || numInputs > 6) {
-    return emitOpError() << "requires between 1 and 6 inputs, but got " 
+    return diag << "requires between 1 and 6 inputs, but got " 
                          << numInputs << " inputs";
   }
-
-  // Check if the highest significant bit of the INIT attribute value overflows
-  // relative to numInputs
-  uint64_t initValue = getINIT();
   do {
     static const uint64_t maxValues[] = {
       (1UL << (1UL << 1)) - 1, // 1 input
@@ -42,13 +37,38 @@ LogicalResult XlnxLutNOp::verify() {
       (1UL << (1UL << 6)) - 1, // 6 inputs
     };
     if (initValue > maxValues[numInputs - 1]) {
-      return emitOpError() << "INIT attribute value is too large for the number of inputs";
+      return diag << "INIT attribute value is too large for the number of inputs";
     }
   } while (0);
-  
-  // The INIT attribute is a 64-bit value, which is sufficient for up to 6 inputs
-  // (2^6 = 64 entries). For fewer inputs, only the lower bits are used.
   return success();
+}
+
+LogicalResult XlnxLutNOp::verify() {
+  return commonVerify(getInputs().size(), getINIT(), emitOpError());
+}
+
+LogicalResult XlnxLut1Op::verify() {
+  return commonVerify(1, getINIT(), emitOpError());
+}
+
+LogicalResult XlnxLut2Op::verify() {
+  return commonVerify(2, getINIT(), emitOpError());
+}
+
+LogicalResult XlnxLut3Op::verify() {
+  return commonVerify(3, getINIT(), emitOpError());
+}
+
+LogicalResult XlnxLut4Op::verify() {
+  return commonVerify(4, getINIT(), emitOpError());
+}
+
+LogicalResult XlnxLut5Op::verify() {
+  return commonVerify(5, getINIT(), emitOpError());
+}
+
+LogicalResult XlnxLut6Op::verify() {
+  return commonVerify(6, getINIT(), emitOpError());
 }
 
 //===----------------------------------------------------------------------===//
