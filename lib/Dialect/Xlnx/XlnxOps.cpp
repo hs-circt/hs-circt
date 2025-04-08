@@ -18,16 +18,33 @@ using namespace circt;
 using namespace circt::xlnx;
 
 //===----------------------------------------------------------------------===//
-// XlnxNLutOp
+// XlnxLutNOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult XlnxNLutOp::verify() {
+LogicalResult XlnxLutNOp::verify() {
   // Verify that the number of inputs is within the valid range (1-6)
   size_t numInputs = getInputs().size();
   if (numInputs < 1 || numInputs > 6) {
     return emitOpError() << "requires between 1 and 6 inputs, but got " 
                          << numInputs << " inputs";
   }
+
+  // Check if the highest significant bit of the INIT attribute value overflows
+  // relative to numInputs
+  uint64_t initValue = getINIT();
+  do {
+    static const uint64_t maxValues[] = {
+      (1UL << (1UL << 1)) - 1, // 1 input
+      (1UL << (1UL << 2)) - 1, // 2 inputs
+      (1UL << (1UL << 3)) - 1, // 3 inputs
+      (1UL << (1UL << 4)) - 1, // 4 inputs
+      (1UL << (1UL << 5)) - 1, // 5 inputs
+      (1UL << (1UL << 6)) - 1, // 6 inputs
+    };
+    if (initValue > maxValues[numInputs - 1]) {
+      return emitOpError() << "INIT attribute value is too large for the number of inputs";
+    }
+  } while (0);
   
   // The INIT attribute is a 64-bit value, which is sufficient for up to 6 inputs
   // (2^6 = 64 entries). For fewer inputs, only the lower bits are used.
