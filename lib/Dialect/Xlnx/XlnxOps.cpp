@@ -22,53 +22,58 @@ using namespace circt::xlnx;
 // XlnxLutNOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult commonVerify(uint32_t numInputs, uint64_t initValue, InFlightDiagnostic &&diag) {
-  if (numInputs < 1 || numInputs > 6) {
-    return diag << "requires between 1 and 6 inputs, but got " 
-                         << numInputs << " inputs";
-  }
-  do {
-    static const uint64_t maxValues[] = {
-      (1UL << (1UL << 1)) - 1, // 1 input
-      (1UL << (1UL << 2)) - 1, // 2 inputs
-      (1UL << (1UL << 3)) - 1, // 3 inputs
-      (1UL << (1UL << 4)) - 1, // 4 inputs
-      (1UL << (1UL << 5)) - 1, // 5 inputs
-      (1UL << (1UL << 6)) - 1, // 6 inputs
-    };
-    if (initValue > maxValues[numInputs - 1]) {
-      return diag << "INIT attribute value is too large for the number of inputs";
+template <typename LutOpTy>
+struct LutVerify : public LutOpTy {
+  static LogicalResult commonVerify(uint32_t numInputs, uint64_t initValue, LutOpTy *op) {
+    if (numInputs < 1 || numInputs > 6) {
+      assert(op && "op is null");
+      return op->emitError() << "requires between 1 and 6 inputs, but got " 
+                          << numInputs << " inputs";
     }
-  } while (0);
-  return success();
-}
+    do {
+      static const uint64_t maxValues[] = {
+        (1UL << (1UL << 1)) - 1, // 1 input
+        (1UL << (1UL << 2)) - 1, // 2 inputs
+        (1UL << (1UL << 3)) - 1, // 3 inputs
+        (1UL << (1UL << 4)) - 1, // 4 inputs
+        (1UL << (1UL << 5)) - 1, // 5 inputs
+        (1UL << (1UL << 6)) - 1, // 6 inputs
+      };
+      if (initValue > maxValues[numInputs - 1]) {
+        assert(op && "op is null");
+        return op->emitError() << "INIT attribute value is too large for the number of inputs";
+      }
+    } while (0);
+    return success();
+  }
+};
 
 LogicalResult XlnxLutNOp::verify() {
-  return commonVerify(getInputs().size(), getINIT(), emitOpError());
+  return LutVerify<XlnxLutNOp>::commonVerify(getInputs().size(), getINIT(), this);
 }
 
 LogicalResult XlnxLut1Op::verify() {
-  return commonVerify(1, getINIT(), emitOpError());
+  return LutVerify<XlnxLut1Op>::commonVerify(1, getINIT(), this);
 }
 
 LogicalResult XlnxLut2Op::verify() {
-  return commonVerify(2, getINIT(), emitOpError());
+  return LutVerify<XlnxLut2Op>::commonVerify(2, getINIT(), this);
 }
 
 LogicalResult XlnxLut3Op::verify() {
-  return commonVerify(3, getINIT(), emitOpError());
+  return LutVerify<XlnxLut3Op>::commonVerify(3, getINIT(), this);
 }
 
 LogicalResult XlnxLut4Op::verify() {
-  return commonVerify(4, getINIT(), emitOpError());
+  return LutVerify<XlnxLut4Op>::commonVerify(4, getINIT(), this);
 }
 
 LogicalResult XlnxLut5Op::verify() {
-  return commonVerify(5, getINIT(), emitOpError());
+  return LutVerify<XlnxLut5Op>::commonVerify(5, getINIT(), this);
 }
 
 LogicalResult XlnxLut6Op::verify() {
-  return commonVerify(6, getINIT(), emitOpError());
+  return LutVerify<XlnxLut6Op>::commonVerify(6, getINIT(), this);
 }
 
 //===----------------------------------------------------------------------===//
