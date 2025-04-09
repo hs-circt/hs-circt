@@ -47,13 +47,13 @@ class XlnxLutBase<string mnemonic, list<Trait> traits = []> : XlnxOp<mnemonic, !
 }
 
 def XlnxLutNOp : XlnxLutBase<"lutn"> {
-  let arguments = (ins Variadic<I1>:$inputs, UI64Attr:$INIT);
+  let arguments = (ins UI64Attr:$INIT, Variadic<I1>:$inputs);
   let results = (outs I1:$result);
   let assemblyFormat = "`(` $inputs `)` attr-dict `:` functional-type($inputs, $result)";
 }
 
 def XlnxLut1Op : XlnxLutBase<"lut1"> {
-  let arguments = (ins I1:$input, UI64Attr:$INIT);
+  let arguments = (ins UI64Attr:$INIT, I1:$input);
   let results = (outs I1:$result);
   let assemblyFormat = "`(` `I0` `:` $input `)` attr-dict `:` type($input) `->` type($result)";
   let extraClassDeclaration = [{
@@ -64,31 +64,31 @@ def XlnxLut1Op : XlnxLutBase<"lut1"> {
 }
 
 def XlnxLut2Op : XlnxLutBase<"lut2"> {
-  let arguments = (ins I1:$input0, I1:$input1, UI64Attr:$INIT);
+  let arguments = (ins UI64Attr:$INIT, I1:$input0, I1:$input1);
   let results = (outs I1:$result);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `)` attr-dict `:` type($input0) `,` type($input1) `->` type($result)";
 }
 
 def XlnxLut3Op : XlnxLutBase<"lut3"> {
-  let arguments = (ins I1:$input0, I1:$input1, I1:$input2, UI64Attr:$INIT);
+  let arguments = (ins UI64Attr:$INIT, I1:$input0, I1:$input1, I1:$input2);
   let results = (outs I1:$result);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `,` `I2` `:` $input2 `)` attr-dict `:` type($input0) `,` type($input1) `,` type($input2) `->` type($result)";
 }
 
 def XlnxLut4Op : XlnxLutBase<"lut4"> {
-  let arguments = (ins I1:$input0, I1:$input1, I1:$input2, I1:$input3, UI64Attr:$INIT);
+  let arguments = (ins UI64Attr:$INIT, I1:$input0, I1:$input1, I1:$input2, I1:$input3);
   let results = (outs I1:$result);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `,` `I2` `:` $input2 `,` `I3` `:` $input3 `)` attr-dict `:` type($input0) `,` type($input1) `,` type($input2) `,` type($input3) `->` type($result)";
 }
 
 def XlnxLut5Op : XlnxLutBase<"lut5"> {
-  let arguments = (ins I1:$input0, I1:$input1, I1:$input2, I1:$input3, I1:$input4, UI64Attr:$INIT);
+  let arguments = (ins UI64Attr:$INIT, I1:$input0, I1:$input1, I1:$input2, I1:$input3, I1:$input4);
   let results = (outs I1:$result);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `,` `I2` `:` $input2 `,` `I3` `:` $input3 `,` `I4` `:` $input4 `)` attr-dict `:` type($input0) `,` type($input1) `,` type($input2) `,` type($input3) `,` type($input4) `->` type($result)";
 }
 
 def XlnxLut6Op : XlnxLutBase<"lut6"> {
-  let arguments = (ins I1:$input0, I1:$input1, I1:$input2, I1:$input3, I1:$input4, I1:$input5, UI64Attr:$INIT);
+  let arguments = (ins UI64Attr:$INIT, I1:$input0, I1:$input1, I1:$input2, I1:$input3, I1:$input4, I1:$input5);
   let results = (outs I1:$result);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `,` `I2` `:` $input2 `,` `I3` `:` $input3 `,` `I4` `:` $input4 `,` `I5` `:` $input5 `)` attr-dict `:` type($input0) `,` type($input1) `,` type($input2) `,` type($input3) `,` type($input4) `,` type($input5) `->` type($result)";
 }

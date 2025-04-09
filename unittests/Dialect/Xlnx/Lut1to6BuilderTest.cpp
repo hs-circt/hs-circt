@@ -63,7 +63,7 @@ protected:
     Value a = hwModule.getBodyBlock()->getArgument(0);
     
     // Create LUT1 (buffer: 0x2 corresponds to binary 10, which means output 1 when input is 1)
-    auto lut = builder.create<XlnxLut1Op>(a, initValue);
+    auto lut = builder.create<XlnxLut1Op>(initValue, a);
     
     // Create output
     hwModule.appendOutput("out", lut.getResult());
@@ -98,7 +98,7 @@ protected:
     Value b = hwModule.getBodyBlock()->getArgument(1);
     
     // Create LUT2 (AND gate: 0x8 corresponds to binary 1000)
-    auto lut = builder.create<XlnxLut2Op>(a, b, initValue);
+    auto lut = builder.create<XlnxLut2Op>(initValue, a, b);
     
     // Create output
     hwModule.appendOutput("out", lut.getResult());
@@ -135,7 +135,7 @@ protected:
     Value c = hwModule.getBodyBlock()->getArgument(2);
     
     // Create LUT3 (majority voter: 0xE8 corresponds to binary 11101000)
-    auto lut = builder.create<XlnxLut3Op>(a, b, c, initValue);
+    auto lut = builder.create<XlnxLut3Op>(initValue, a, b, c);
     
     // Create output
     hwModule.appendOutput("out", lut.getResult());
@@ -174,7 +174,7 @@ protected:
     Value d = hwModule.getBodyBlock()->getArgument(3);
     
     // Create LUT4 (example function: 0xFFCC, complex mode)
-    auto lut = builder.create<XlnxLut4Op>(a, b, c, d, initValue);
+    auto lut = builder.create<XlnxLut4Op>(initValue, a, b, c, d);
     
     // Create output
     hwModule.appendOutput("out", lut.getResult());
@@ -215,7 +215,7 @@ protected:
     Value e = hwModule.getBodyBlock()->getArgument(4);
     
     // Create LUT5 (example function: 0xAAAA5555, alternating mode)
-    auto lut = builder.create<XlnxLut5Op>(a, b, c, d, e, initValue);
+    auto lut = builder.create<XlnxLut5Op>(initValue, a, b, c, d, e);
     
     // Create output
     hwModule.appendOutput("out", lut.getResult());
@@ -258,7 +258,7 @@ protected:
     Value f = hwModule.getBodyBlock()->getArgument(5);
     
     // Create LUT6 (example function: 0x8000000000000000, only output 1 when all inputs are 1)
-    auto lut = builder.create<XlnxLut6Op>(a, b, c, d, e, f, initValue);
+    auto lut = builder.create<XlnxLut6Op>(initValue, a, b, c, d, e, f);
     
     // Create output
     hwModule.appendOutput("out", lut.getResult());
@@ -299,13 +299,13 @@ protected:
     
     // Cascade using different types of LUTs
     // LUT1 as buffer
-    auto lut1 = builder.create<XlnxLut1Op>(a, 0x2);
+    auto lut1 = builder.create<XlnxLut1Op>(0x2, a);
     
     // LUT2 as AND gate
-    auto lut2 = builder.create<XlnxLut2Op>(lut1.getResult(), b, 0x8);
+    auto lut2 = builder.create<XlnxLut2Op>(0x8, lut1.getResult(), b);
     
     // LUT3 as OR gate
-    auto lut3 = builder.create<XlnxLut3Op>(lut2.getResult(), c, d, 0xFE);
+    auto lut3 = builder.create<XlnxLut3Op>(0xFE, lut2.getResult(), c, d);
     
     // Create output
     hwModule.appendOutput("out", lut3.getResult());
@@ -342,19 +342,19 @@ protected:
     
     // Create various logic gates
     // Buffer - LUT1 (buffer, INIT=0x2, binary 10)
-    auto bufferLut = builder.create<XlnxLut1Op>(a, 0x2);
+    auto bufferLut = builder.create<XlnxLut1Op>(0x2, a);
     
     // NOT - LUT1 (NOT gate, INIT=0x1, binary 01)
-    auto notLut = builder.create<XlnxLut1Op>(a, 0x1);
+    auto notLut = builder.create<XlnxLut1Op>(0x1, a);
     
     // AND - LUT2 (AND gate, INIT=0x8, binary 1000)
-    auto andLut = builder.create<XlnxLut2Op>(a, b, 0x8);
+    auto andLut = builder.create<XlnxLut2Op>(0x8, a, b);
     
     // OR - LUT2 (OR gate, INIT=0xE, binary 1110)
-    auto orLut = builder.create<XlnxLut2Op>(a, b, 0xE);
+    auto orLut = builder.create<XlnxLut2Op>(0xE, a, b);
     
     // XOR - LUT2 (XOR gate, INIT=0x6, binary 0110)
-    auto xorLut = builder.create<XlnxLut2Op>(a, b, 0x6);
+    auto xorLut = builder.create<XlnxLut2Op>(0x6, a, b);
     
     // Create output
     hwModule.appendOutput("buffer_out", bufferLut.getResult());
