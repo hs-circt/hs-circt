@@ -19,63 +19,88 @@
 #define GET_OP_CLASSES
 #include "circt/Dialect/Xlnx/Xlnx.h.inc"
 
+#include <optional>
+
 namespace circt {
     namespace xlnx {
         namespace xlnx_prims_helper {
-            template <class Action>
-            struct Applicator {
-                template <class Opt> static void apply(const Action &action, Opt &O) {
-                    action.apply(O);
-                }
-            };
+            namespace application {
+                template <class Action>
+                struct Applicator {
+                    template <class Opt> static void apply(const Action &action, Opt &O) {
+                        action.apply(O);
+                    }
+                };
 
-            template <typename Obj> void ApplyAction(Obj &O) {
-                (void) O;
-            }
-
-            template <typename Obj, typename Action> void ApplyAction(Obj &O, const Action &action) {
-                Applicator<Action>::apply(action, O);
-            }
-
-            template <typename Obj, typename Action, typename ... Actions>
-            void ApplyAction(Obj &O, const Action &action, const Actions &... actions) {
-                ApplyAction(O, action);
-                ApplyAction(O, actions...);
-            }
-            
-            struct Lut1 {
-                template <typename ... Actions>
-                explicit Lut1(Actions &&... actions) {
-                    ApplyAction(*this, actions...);
+                template <typename Obj> void ApplyAction(Obj &O) {
+                    (void) O;
                 }
 
-                template <typename OpBuilder>
-                auto done(OpBuilder &opBuilder) {
-                    return opBuilder.template create<circt::xlnx::XlnxLut1Op>(i0, init);
+                template <typename Obj, typename Action> void ApplyAction(Obj &O, const Action &action) {
+                    Applicator<Action>::apply(action, O);
                 }
 
-                ::mlir::Value i0 = nullptr;
-                uint64_t init = 0;
-            };
+                template <typename Obj, typename Action, typename ... Actions>
+                void ApplyAction(Obj &O, const Action &action, const Actions &... actions) {
+                    ApplyAction(O, action);
+                    ApplyAction(O, actions...);
+                }
+            }
+
+            namespace model {
+                struct Lut1 {
+                    template <typename ... Actions>
+                    explicit Lut1(Actions &&... actions) {
+                        application::ApplyAction(*this, actions...);
+                    }
+
+                    template <typename OpBuilder>
+                    auto done(OpBuilder &opBuilder) {
+                        return opBuilder.template create<circt::xlnx::XlnxLut1Op>(i0, init);
+                    }
+
+                    std::optional<::mlir::Value> i0 = std::nullopt;
+
+                    std::optional<uint64_t> init = std::nullopt;
+                };
+            }
         }
+
+#ifdef LUT1_NAMED_ASSOCIATED_BUILD
         template <typename ... Actions>
         void XlnxLut1Op::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, Actions &&... actions) {
-            xlnx_prims_helper::Lut1 lut1(actions...);
-            XlnxLut1Op::build(odsBuilder, odsState, lut1.i0, lut1.init);
+            xlnx_prims_helper::model::Lut1 lut1(actions...);
+            // Check if I0 and INIT are assigned
+            if (!lut1.i0.has_value()) {
+                assert(false && "I0 is not assigned");
+            }
+            if (!lut1.init.has_value()) {
+                assert(false && "INIT is not assigned");
+            }
+            XlnxLut1Op::build(odsBuilder, odsState, lut1.i0.value(), lut1.init.value());
         }
+#endif
     }
 }
 
-struct I0 {
-    explicit I0(::mlir::Value connectWire) : connectWire(connectWire) {}
+#define LUT_INPUT(IDX) \
+    struct I##IDX { \
+        explicit I##IDX(::mlir::Value connectWire) : connectWire(connectWire) {} \
+        template <typename PrimOpBuilder> \
+        void apply(PrimOpBuilder &opBuilder) const { \
+            opBuilder.i##IDX = connectWire; \
+        } \
+        ::mlir::Value connectWire = nullptr; \
+    };
 
-    template <typename PrimOpBuilder>
-    void apply(PrimOpBuilder &opBuilder) const {
-        opBuilder.i0 = connectWire;
-    }
+LUT_INPUT(0)
+LUT_INPUT(1)
+LUT_INPUT(2)
+LUT_INPUT(3)
+LUT_INPUT(4)
+LUT_INPUT(5)
 
-    ::mlir::Value connectWire = nullptr;
-};
+#undef LUT_INPUT
 
 struct INIT {
     explicit INIT(uint64_t init) : init(init) {}
