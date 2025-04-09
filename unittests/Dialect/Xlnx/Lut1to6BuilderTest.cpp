@@ -299,7 +299,7 @@ protected:
     
     // Cascade using different types of LUTs
     // LUT1 as buffer
-    auto lut1 = builder.create<XlnxLut1Op>(a, 0x2);
+    auto lut1 = builder.create<XlnxLut1Op>(I0(a), INIT(0x2));
     
     // LUT2 as AND gate
     auto lut2 = builder.create<XlnxLut2Op>(lut1.getResult(), b, 0x8);
@@ -342,10 +342,10 @@ protected:
     
     // Create various logic gates
     // Buffer - LUT1 (buffer, INIT=0x2, binary 10)
-    auto bufferLut = builder.create<XlnxLut1Op>(a, 0x2);
+    auto bufferLut = builder.create<XlnxLut1Op>(I0(a), INIT(0x2));
     
     // NOT - LUT1 (NOT gate, INIT=0x1, binary 01)
-    auto notLut = builder.create<XlnxLut1Op>(a, 0x1);
+    auto notLut = builder.create<XlnxLut1Op>(INIT(0x1), I0(a));
     
     // AND - LUT2 (AND gate, INIT=0x8, binary 1000)
     auto andLut = builder.create<XlnxLut2Op>(a, b, 0x8);
