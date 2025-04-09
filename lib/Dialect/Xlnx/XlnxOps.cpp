@@ -77,6 +77,22 @@ LogicalResult XlnxLut6Op::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// XlnxMux*Op
+//===----------------------------------------------------------------------===//
+
+LogicalResult XlnxMuxF7Op::verify() {
+  return success();
+}
+
+LogicalResult XlnxMuxF8Op::verify() {
+  return success();
+}
+
+LogicalResult XlnxMuxF9Op::verify() {
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen generated logic.
 //===----------------------------------------------------------------------===//
 
