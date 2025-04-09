@@ -1,5 +1,6 @@
 add_circt_unittest(CIRCTXlnxTests
-  LutBuilderTest.cpp
+  LutNBuilderTest.cpp
+  Lut1to6BuilderTest.cpp
 )
 
 target_link_libraries(CIRCTXlnxTests
