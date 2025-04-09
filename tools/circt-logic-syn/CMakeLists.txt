@@ -21,4 +21,11 @@ target_link_libraries(circt-logic-syn PRIVATE
   MLIRSupport
   MLIRIR
   MLIROptLib
+  mockturtle
 )
+
+if(CIRCT_LOGIC_SYN_ENABLED)
+  target_include_directories(circt-logic-syn PRIVATE
+    ${mockturtle_SOURCE_DIR}/include
+  )
+endif()

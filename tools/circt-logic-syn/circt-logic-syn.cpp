@@ -34,6 +34,24 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <fmt/format.h>
+#include <lorina/aiger.hpp>
+#include <lorina/genlib.hpp>
+#include <mockturtle/algorithms/aig_balancing.hpp>
+#include <mockturtle/algorithms/emap.hpp>
+#include <mockturtle/algorithms/lut_mapper.hpp>
+#include <mockturtle/generators/arithmetic.hpp>
+#include <mockturtle/io/aiger_reader.hpp>
+#include <mockturtle/io/genlib_reader.hpp>
+#include <mockturtle/io/write_blif.hpp>
+#include <mockturtle/io/write_verilog.hpp>
+#include <mockturtle/networks/aig.hpp>
+#include <mockturtle/networks/block.hpp>
+#include <mockturtle/utils/name_utils.hpp>
+#include <mockturtle/utils/tech_library.hpp>
+#include <mockturtle/views/cell_view.hpp>
+#include <mockturtle/views/depth_view.hpp>
+#include <mockturtle/views/names_view.hpp>
 
 namespace cl = llvm::cl;
 
@@ -75,13 +93,38 @@ static cl::opt<OutputFormat> outputFormat(
 //===----------------------------------------------------------------------===//
 // Tool implementation
 //===----------------------------------------------------------------------===//
+
+void tryMockturtle() {
+  using namespace mockturtle;
+
+  aig_network aig;
+
+  std::vector<aig_network::signal> a(2), b(2);
+  std::generate(a.begin(), a.end(), [&aig]() { return aig.create_pi(); });
+  std::generate(b.begin(), b.end(), [&aig]() { return aig.create_pi(); });
+  auto carry = aig.create_pi();
+
+  carry_ripple_adder_inplace(aig, a, b, carry);
+
+  std::for_each(a.begin(), a.end(), [&](auto f) { aig.create_po(f); });
+  aig.create_po(carry);
+
+  const auto simm = simulate<kitty::static_truth_table<5u>>(aig);
+
+  klut_network klut = lut_map(aig);
+  write_blif(klut, "klut.blif");
+  fmt::print("[i] Lut mapper success\n");
+}
+
 LogicalResult executeLogicSyn(MLIRContext &context) {
-  auto module = parseSourceFile<ModuleOp>(inputFilename, &context);
+  // auto module = parseSourceFile<ModuleOp>(inputFilename, &context);
 
-  auto outFile = openOutputFile(outputFilename);
+  // auto outFile = openOutputFile(outputFilename);
 
-  module->print(outFile->os());
-  outFile->keep();
+  // module->print(outFile->os());
+  // outFile->keep();
+
+  tryMockturtle();
 
   return success();
 }
