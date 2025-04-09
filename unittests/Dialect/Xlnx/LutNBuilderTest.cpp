@@ -67,7 +67,7 @@ protected:
     Value b = hwModule.getBodyBlock()->getArgument(1);
     
     // Create LUT (AND gate: 0x8 corresponds to binary 1000, meaning output 1 only when both inputs are 1)
-    auto lut = builder.create<XlnxLutNOp>(ValueRange{a, b}, 0x8);
+    auto lut = builder.create<XlnxLutNOp>(0x8, ValueRange{a, b});
     
     // Create output
     hwModule.appendOutput("out", lut.getResult());
@@ -106,10 +106,10 @@ protected:
     Value c = hwModule.getBodyBlock()->getArgument(2);
     
     // Create first LUT (AND gate: 0x8)
-    auto lut1 = builder.create<XlnxLutNOp>(ValueRange{a, b}, 0x8);
+    auto lut1 = builder.create<XlnxLutNOp>(0x8, ValueRange{a, b});
     
     // Create second LUT, connected to the output of the first LUT (OR gate: 0xE)
-    auto lut2 = builder.create<XlnxLutNOp>(ValueRange{lut1.getResult(), c}, 0xE);
+    auto lut2 = builder.create<XlnxLutNOp>(0xE, ValueRange{lut1.getResult(), c});
     
     // Create output
     hwModule.appendOutput("out", lut2.getResult());
@@ -150,8 +150,8 @@ protected:
     Value d = hwModule.getBodyBlock()->getArgument(3);
     
     // Create two parallel LUTs
-    auto lut1 = builder.create<XlnxLutNOp>(ValueRange{a, b}, 0x8); // AND gate
-    auto lut2 = builder.create<XlnxLutNOp>(ValueRange{c, d}, 0xE); // OR gate
+    auto lut1 = builder.create<XlnxLutNOp>(0x8, ValueRange{a, b}); // AND gate
+    auto lut2 = builder.create<XlnxLutNOp>(0xE, ValueRange{c, d}); // OR gate
     
     // Create output
     hwModule.appendOutput("out1", lut1.getResult());
