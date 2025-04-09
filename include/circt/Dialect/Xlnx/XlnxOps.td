@@ -54,6 +54,10 @@ def XlnxLutNOp : XlnxLutBase<"lutn"> {
 def XlnxLut1Op : XlnxLutBase<"lut1"> {
   let arguments = (ins I1:$input, UI64Attr:$INIT);
   let assemblyFormat = "`(` `I0` `:` $input `)` attr-dict `:` type($input) `->` type($result)";
+  let extraClassDeclaration = [{
+    template <typename ... Actions>
+    static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, Actions &&... actions);
+  }];
 }
 
 def XlnxLut2Op : XlnxLutBase<"lut2"> {
