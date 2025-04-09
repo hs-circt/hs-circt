@@ -1,4 +1,4 @@
-//===- LutBuilderTest.cpp - Tests for LutN builder methods -------------===//
+//===- LutNBuilderTest.cpp - Tests for LutN builder methods -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,7 @@ using namespace circt::hw;
 namespace {
 
 // Test Auxiliary class, used to set up the test environment
-class XlnxLutTest : public testing::Test {
+class XlnxLutNBuilderTest : public testing::Test {
 protected:
   void SetUp() override {
     // Register dialects
@@ -173,30 +173,19 @@ protected:
     return !isspace(c) && !iscntrl(c) && c != '\n' && c != '\r' && c != '\t';
   }
 
-  // Compare the expected and actual IR without whitespace
-  void compareIR(const std::string &expected, const std::string &actual) {
-    // Remove all whitespace from both strings
-    std::stringstream canonizationExpected, canonizationActual;
+  std::string canonizeIRString(const std::string &ir) {
+    std::stringstream canonization;
     bool lastWasVisible = false;
-    for (char c : expected) {
+    for (char c : ir) {
       if (isVisibleChar(c)) {
-        canonizationExpected << c;
+        canonization << c;
         lastWasVisible = true;
       } else if (lastWasVisible) {
-        canonizationExpected << ' ';
+        canonization << ' ';
         lastWasVisible = false;
       }
     }
-    for (char c : actual) {
-      if (isVisibleChar(c)) {
-        canonizationActual << c;
-        lastWasVisible = true;
-      } else if (lastWasVisible) {
-        canonizationActual << ' ';
-        lastWasVisible = false;
-      }
-    }
-    EXPECT_EQ(canonizationExpected.str(), canonizationActual.str());
+    return canonization.str();
   }
 
   DialectRegistry registry;
@@ -204,7 +193,7 @@ protected:
 };
 
 // Test the construction of a single LUT
-TEST_F(XlnxLutTest, SingleLut) {
+TEST_F(XlnxLutNBuilderTest, SingleLut) {
   auto module = createSingleLutModule();
   std::string ir = verifyAndPrint(module);
 
@@ -217,11 +206,11 @@ TEST_F(XlnxLutTest, SingleLut) {
   "}\n";
 
   // Compare the expected and actual IR without whitespace
-  compareIR(expected, ir);
+  EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
 // Test the construction of cascaded LUTs
-TEST_F(XlnxLutTest, SerialLuts) {
+TEST_F(XlnxLutNBuilderTest, SerialLuts) {
   auto module = createSerialLutsModule();
   std::string ir = verifyAndPrint(module);
   std::string expected =
@@ -234,12 +223,12 @@ TEST_F(XlnxLutTest, SerialLuts) {
   "}\n";
 
   // Compare the expected and actual IR without whitespace
-  compareIR(expected, ir);
+  EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
 
 // Test the construction of parallel LUTs
-TEST_F(XlnxLutTest, ParallelLuts) {
+TEST_F(XlnxLutNBuilderTest, ParallelLuts) {
   auto module = createParallelLutsModule();
   std::string ir = verifyAndPrint(module);
   std::string expected =
@@ -252,7 +241,7 @@ TEST_F(XlnxLutTest, ParallelLuts) {
   "}\n";
   
   // Compare the expected and actual IR without whitespace
-  compareIR(expected, ir);
+  EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
 } // namespace 
