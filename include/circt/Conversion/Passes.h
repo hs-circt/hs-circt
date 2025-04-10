@@ -40,6 +40,7 @@
 #include "circt/Conversion/LTLToCore.h"
 #include "circt/Conversion/LoopScheduleToCalyx.h"
 #include "circt/Conversion/MooreToCore.h"
+#include "circt/Conversion/CoreMemoryMapping.h"
 #include "circt/Conversion/PipelineToHW.h"
 #include "circt/Conversion/SCFToCalyx.h"
 #include "circt/Conversion/SMTToZ3LLVM.h"
