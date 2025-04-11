@@ -9,16 +9,16 @@
 #ifndef CIRCT_DIALECT_XLNX_TYPES_H
 #define CIRCT_DIALECT_XLNX_TYPES_H
 
+// clang-format off
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 #define GET_TYPEDEF_CLASSES
 #include "circt/Dialect/Xlnx/XlnxTypes.h.inc"
+// clang-format on
 
 namespace circt {
-namespace xlnx {
-
-} // end namespace xlnx
+namespace xlnx {} // end namespace xlnx
 } // end namespace circt
 
 #endif // CIRCT_DIALECT_XLNX_TYPES_H
