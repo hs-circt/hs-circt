@@ -17,6 +17,7 @@ def XlnxDialect : Dialect {
     let summary = "Xilinx dialect (UltraScale+ Only)";
     let description = "This dialect contains Xilinx operations for UltraScale+ devices";
     let cppNamespace = "::circt::xlnx";
+    let dependentDialects = ["circt::hw::HWDialect", "circt::seq::SeqDialect"];
 }
 
 #endif // CIRCT_DIALECT_XLNX_XLNXDIALECT_TD
