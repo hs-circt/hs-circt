@@ -15,7 +15,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/ValueRange.h"
-
+#include "circt/Dialect/Xlnx/XlnxTypes.h"
 #define GET_OP_CLASSES
 #include "circt/Dialect/Xlnx/Xlnx.h.inc"
 
