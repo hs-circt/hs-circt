@@ -90,14 +90,20 @@ The development plan of the Xlnx dialect includes:
 
 ## FAQ
 
-**Q: Why is the INIT attribute designed as a 64-bit integer instead of a smaller bit width? **
+**Q: Why has the INIT attribute design been changed from a uniform 64-bit integer to specific bit widths for each LUT type?**
 
-A: Although most LUT usage scenarios only require 2^6=64 bits (for a 6-input LUT), we chose to use a standard 64-bit integer to keep the interface consistent and avoid the complexity of handling different bit widths. This simplifies the implementation of verifiers and generators.
+A: The updated design uses the exact bit width required for each LUT size (2^N bits for an N-input LUT), which provides the following benefits:
+1. More precise type checking and error detection at the dialect level
+2. Better representation of the actual hardware constraints
+3. More efficient memory usage and processing within the compiler
+4. Clearer documentation and user interface
 
-**Q: Why don't you use an array or a more intuitive truth table representation instead of an integer INIT value? **
+The generic `xlnx.lutn` operation still uses a 64-bit integer for backward compatibility and flexibility when the number of inputs is determined at runtime.
+
+**Q: Why don't you use an array or a more intuitive truth table representation instead of an integer INIT value?**
 
 A: The integer INIT value directly corresponds to how the Xilinx toolchain and hardware are represented, making integration with existing tools more seamless. In addition, the integer representation is more efficient in terms of internal processing and storage.
 
-**Q: Why is there no routing or placement information included in the dialect? **
+**Q: Why is there no routing or placement information included in the dialect?**
 
 A: The Xlnx dialect currently focuses on logical representation, not physical implementation details. Routing and placement information is typically handled by downstream Xilinx tools, or may be added as a separate abstraction layer in future extensions.

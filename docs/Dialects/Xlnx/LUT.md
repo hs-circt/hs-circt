@@ -27,19 +27,19 @@ Where:
 
 ```mlir
 // LUT1 (1 input)
-%result = xlnx.lut1(I0: %input) {INIT = value : ui64} : i1 -> i1
+%result = xlnx.lut1(I0: %input) {INIT = value : ui2} : i1 -> i1
 
 // LUT2 (2 inputs)
-%result = xlnx.lut2(I0: %input0, I1: %input1) {INIT = value : ui64} : i1, i1 -> i1
+%result = xlnx.lut2(I0: %input0, I1: %input1) {INIT = value : ui4} : i1, i1 -> i1
 
 // LUT3 (3 inputs)
-%result = xlnx.lut3(I0: %input0, I1: %input1, I2: %input2) {INIT = value : ui64} : i1, i1, i1 -> i1
+%result = xlnx.lut3(I0: %input0, I1: %input1, I2: %input2) {INIT = value : ui8} : i1, i1, i1 -> i1
 
 // LUT4 (4 inputs)
-%result = xlnx.lut4(I0: %input0, I1: %input1, I2: %input2, I3: %input3) {INIT = value : ui64} : i1, i1, i1, i1 -> i1
+%result = xlnx.lut4(I0: %input0, I1: %input1, I2: %input2, I3: %input3) {INIT = value : ui16} : i1, i1, i1, i1 -> i1
 
 // LUT5 (5 inputs)
-%result = xlnx.lut5(I0: %input0, I1: %input1, I2: %input2, I3: %input3, I4: %input4) {INIT = value : ui64} : i1, i1, i1, i1, i1 -> i1
+%result = xlnx.lut5(I0: %input0, I1: %input1, I2: %input2, I3: %input3, I4: %input4) {INIT = value : ui32} : i1, i1, i1, i1, i1 -> i1
 
 // LUT6 (6 inputs)
 %result = xlnx.lut6(I0: %input0, I1: %input1, I2: %input2, I3: %input3, I4: %input4, I5: %input5) {INIT = value : ui64} : i1, i1, i1, i1, i1, i1 -> i1
@@ -48,16 +48,24 @@ Where:
 Where:
 - `I0` through `I5` are input location labels that correspond to specific input pins of the Xilinx LUT cell
 - Each LUT operation accepts a fixed number of Boolean (i1) inputs and returns a Boolean (i1) result
-- `INIT` is a 64-bit unsigned integer property that defines the truth table of the LUT
+- `INIT` is an unsigned integer property that defines the truth table of the LUT, with the bit width matching the requirements for each LUT size (ui2 for LUT1, ui4 for LUT2, etc.)
 
 ## INIT Properties
 
-The `INIT` attribute is a 64-bit unsigned integer that defines the functionality of the LUT. It represents a truth table where each bit corresponds to the output value for a specific input combination.
+The `INIT` attribute is an unsigned integer that defines the functionality of the LUT. It represents a truth table where each bit corresponds to the output value for a specific input combination. The bit width of the INIT attribute varies based on the number of inputs:
 
-For an N-input LUT, the lower 2^N bits of the `INIT` attribute are used. The index of each bit corresponds to the binary encoding of the input, following the following rules:
+- For 1-input LUT (LUT1): 2-bit INIT (ui2)
+- For 2-input LUT (LUT2): 4-bit INIT (ui4)
+- For 3-input LUT (LUT3): 8-bit INIT (ui8)
+- For 4-input LUT (LUT4): 16-bit INIT (ui16)
+- For 5-input LUT (LUT5): 32-bit INIT (ui32)
+- For 6-input LUT (LUT6): 64-bit INIT (ui64)
+- For generic LUT (lutn): 64-bit INIT (ui64), with only the lower 2^N bits used for an N-input LUT
+
+For an N-input LUT, the INIT attribute uses 2^N bits. The index of each bit corresponds to the binary encoding of the input, following the following rules:
 - For the combination of inputs (I0, I1, ..., I(N-1)), the corresponding bit index is: (I(N-1) << (N-1)) | ... | (I1 << 1) | I0
 
-For example, for a 2-input LUT, the lower 4 bits of the `INIT` attribute are used, mapping as follows:
+For example, for a 2-input LUT, the 4 bits of the `INIT` attribute are used, mapping as follows:
 - INIT[0]: Output when input is (I0=0, I1=0)
 - INIT[1]: Output when input is (I0=1, I1=0)
 - INIT[2]: Output when input is (I0=0, I1=1)
@@ -66,12 +74,12 @@ For example, for a 2-input LUT, the lower 4 bits of the `INIT` attribute are use
 ### INIT values ​​for common logic functions
 
 Here are some common INIT values ​​for 2-input logic functions:
-- AND gate: INIT = 8 (binary 1000)
-- OR gate: INIT = 14 (binary 1110)
-- XOR gate: INIT = 6 (binary 0110)
-- NAND gate: INIT = 7 (binary 0111)
-- NOR gate: INIT = 1 (binary 0001)
-- XNOR gate: INIT = 9 (binary 1001)
+- AND gate: INIT = 8 (binary 1000) - This is a ui4 value for LUT2
+- OR gate: INIT = 14 (binary 1110) - This is a ui4 value for LUT2
+- XOR gate: INIT = 6 (binary 0110) - This is a ui4 value for LUT2
+- NAND gate: INIT = 7 (binary 0111) - This is a ui4 value for LUT2
+- NOR gate: INIT = 1 (binary 0001) - This is a ui4 value for LUT2
+- XNOR gate: INIT = 9 (binary 1001) - This is a ui4 value for LUT2
 
 ## Example
 
@@ -79,26 +87,26 @@ Here are some common INIT values ​​for 2-input logic functions:
 
 ```mlir
 // Create an AND gate
-%and = xlnx.lut2(I0: %a, I1: %b) {INIT = 8 : ui64} : i1, i1 -> i1
+%and = xlnx.lut2(I0: %a, I1: %b) {INIT = 8 : ui4} : i1, i1 -> i1
 
 // Create the same AND gate using a generic LUT
 %and_generic = xlnx.lutn(%a, %b) {INIT = 8 : ui64} : (i1, i1) -> i1
 
 // Create an XOR gate
-%xor = xlnx.lut2(I0: %a, I1: %b) {INIT = 6 : ui64} : i1, i1 -> i1
+%xor = xlnx.lut2(I0: %a, I1: %b) {INIT = 6 : ui4} : i1, i1 -> i1
 
 // Create a 3-input majority voter (output 1 if 2 or more of the inputs are 1)
-%majority = xlnx.lut3(I0: %a, I1: %b, I2: %c) {INIT = 232: ui64}: i1, i1, i1 -> i1
+%majority = xlnx.lut3(I0: %a, I1: %b, I2: %c) {INIT = 232: ui8}: i1, i1, i1 -> i1
 ```
 
 ### LUT Cascading
 
 ```mlir
 // Create an AND gate
-%and = xlnx.lut2(I0: %a, I1: %b) {INIT = 8 : ui64} : i1, i1 -> i1
+%and = xlnx.lut2(I0: %a, I1: %b) {INIT = 8 : ui4} : i1, i1 -> i1
 
 // Create an OR gate that takes the output of the previous LUT as one of its inputs
-%or = xlnx.lut2(I0: %and, I1: %c) {INIT = 14 : ui64} : i1, i1 -> i1
+%or = xlnx.lut2(I0: %and, I1: %c) {INIT = 14 : ui4} : i1, i1 -> i1
 ```
 
 ## Validation Rules
