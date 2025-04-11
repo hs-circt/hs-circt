@@ -9,7 +9,9 @@
 #ifndef CIRCT_DIALECT_XLNX_XLNXDIALECT_H
 #define CIRCT_DIALECT_XLNX_XLNXDIALECT_H
 
+// clang-format off
 #include "mlir/IR/Dialect.h"
 #include "circt/Dialect/Xlnx/XlnxDialect.h.inc"
+// clang-format on
 
 #endif // CIRCT_DIALECT_XLNX_XLNXDIALECT_H

@@ -1,4 +1,4 @@
-//===- XlnxDialect.cpp - Xlnx dialect implementation ---------------*- C++ -*-===//
+//===- XlnxDialect.cpp - Xlnx dialect implementation ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// clang-format off
 #include "circt/Dialect/Xlnx/XlnxDialect.h"
 #include "circt/Dialect/Xlnx/XlnxOps.h"
+// clang-format on
 
 using namespace mlir;
 using namespace circt;
@@ -25,4 +27,4 @@ void XlnxDialect::initialize() {
       >();
 }
 
-#include "circt/Dialect/Xlnx/XlnxDialect.cpp.inc" 
+#include "circt/Dialect/Xlnx/XlnxDialect.cpp.inc"
