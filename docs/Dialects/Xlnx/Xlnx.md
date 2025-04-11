@@ -20,4 +20,14 @@ Currently, the Xlnx dialect implements full support for 1-6 input lookup tables 
 - `xlnx.lut5` - 5-input lookup table
 - `xlnx.lut6` - 6-input lookup table
 
-Each LUT operation has its truth table defined by the `INIT` attribute, which is a 64-bit unsigned integer. Each bit of the `INIT` attribute corresponds to the output value for a specific input combination.
+Each LUT operation has its truth table defined by the `INIT` attribute, which is an unsigned integer with a bit width that corresponds to the LUT size (2^N bits for an N-input LUT). For specific LUT operations, the bit widths are:
+- LUT1: 2-bit INIT (ui2)
+- LUT2: 4-bit INIT (ui4)
+- LUT3: 8-bit INIT (ui8)
+- LUT4: 16-bit INIT (ui16)
+- LUT5: 32-bit INIT (ui32)
+- LUT6: 64-bit INIT (ui64)
+
+For the generic `xlnx.lutn` operation, a 64-bit unsigned integer is used, with only the lower 2^N bits being relevant for an N-input LUT.
+
+Each bit of the `INIT` attribute corresponds to the output value for a specific input combination.
