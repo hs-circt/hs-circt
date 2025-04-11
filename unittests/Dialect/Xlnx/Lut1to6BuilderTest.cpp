@@ -427,8 +427,9 @@ TEST_F(XlnxSpecificLutTest, Lut3Test) {
       "    %0 = xlnx.lut3(I0 : %a, I1 : %b, I2 : %c) {INIT = 232 : ui8} : i1, i1, i1 -> i1\n"
       "    hw.output %0 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -443,8 +444,9 @@ TEST_F(XlnxSpecificLutTest, Lut4Test) {
       "    %0 = xlnx.lut4(I0 : %a, I1 : %b, I2 : %c, I3 : %d) {INIT = 65484 : ui16} : i1, i1, i1, i1 -> i1\n"
       "    hw.output %0 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -459,8 +461,9 @@ TEST_F(XlnxSpecificLutTest, Lut5Test) {
       "    %0 = xlnx.lut5(I0 : %a, I1 : %b, I2 : %c, I3 : %d, I4 : %e) {INIT = 2863311530 : ui32} : i1, i1, i1, i1, i1 -> i1\n"
       "    hw.output %0 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -475,8 +478,9 @@ TEST_F(XlnxSpecificLutTest, Lut6Test) {
       "    %0 = xlnx.lut6(I0 : %a, I1 : %b, I2 : %c, I3 : %d, I4 : %e, I5 : %f) {INIT = 9223372036854775808 : ui64} : i1, i1, i1, i1, i1, i1 -> i1\n"
       "    hw.output %0 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -490,11 +494,12 @@ TEST_F(XlnxSpecificLutTest, CascadedLutsTest) {
       "  hw.module @CascadedLutsModule(in %a : i1, in %b : i1, in %c : i1, in %d : i1, out out : i1) {\n"
       "    %0 = xlnx.lut1(I0 : %a) {INIT = 2 : ui2} : i1 -> i1\n"
       "    %1 = xlnx.lut2(I0 : %0, I1 : %b) {INIT = 8 : ui4} : i1, i1 -> i1\n"
-  "    %2 = xlnx.lut3(I0 : %1, I1 : %c, I2 : %d) {INIT = 254 : ui8} : i1, i1, i1 -> i1\n"
+      "    %2 = xlnx.lut3(I0 : %1, I1 : %c, I2 : %d) {INIT = 254 : ui8} : i1, i1, i1 -> i1\n"
       "    hw.output %2 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -513,8 +518,9 @@ TEST_F(XlnxSpecificLutTest, CommonGatesTest) {
       "    %4 = xlnx.lut2(I0 : %a, I1 : %b) {INIT = 6 : ui4} : i1, i1 -> i1\n"
       "    hw.output %0, %1, %2, %3, %4 : i1, i1, i1, i1, i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 

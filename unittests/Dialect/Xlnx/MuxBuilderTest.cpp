@@ -346,8 +346,9 @@ TEST_F(XlnxMuxTest, MuxF7Test) {
       "    %0 = xlnx.muxf7(S : %select, I0 : %input0, I1 : %input1) : i1, i1, i1 -> i1\n"
       "    hw.output %0 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -362,8 +363,9 @@ TEST_F(XlnxMuxTest, MuxF8Test) {
       "    %0 = xlnx.muxf8(S : %select, I0 : %input0, I1 : %input1) : i1, i1, i1 -> i1\n"
       "    hw.output %0 : i1\n"
       "  }\n"
-      "}\n";
-  // clang-format on
+      "}\n"
+      // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -378,8 +380,9 @@ TEST_F(XlnxMuxTest, MuxF9Test) {
       "    %0 = xlnx.muxf9(S : %select, I0 : %input0, I1 : %input1) : i1, i1, i1 -> i1\n"
       "    hw.output %0 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -397,7 +400,7 @@ TEST_F(XlnxMuxTest, CascadedMuxTest) {
       "    hw.output %2 : i1\n"
       "  }\n"
       "}\n";
-      // clang-format on
+  // clang-format on
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -418,8 +421,9 @@ TEST_F(XlnxMuxTest, ComplexMuxTreeTest) {
       "    %6 = xlnx.muxf9(S : %select3, I0 : %4, I1 : %5) : i1, i1, i1 -> i1\n"
       "    hw.output %6 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 
@@ -436,8 +440,9 @@ TEST_F(XlnxMuxTest, LutsWithMuxTest) {
       "    %2 = xlnx.muxf7(S : %select, I0 : %0, I1 : %1) : i1, i1, i1 -> i1\n"
       "    hw.output %2 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
 

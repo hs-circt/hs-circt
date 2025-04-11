@@ -222,8 +222,9 @@ TEST_F(XlnxLutNBuilderTest, SerialLuts) {
       "    %1 = xlnx.lutn(%0, %c) {INIT = 14 : ui64} : (i1, i1) -> i1\n"
       "    hw.output %1 : i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   // Compare the expected and actual IR without whitespace
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
@@ -240,8 +241,9 @@ TEST_F(XlnxLutNBuilderTest, ParallelLuts) {
       "    %1 = xlnx.lutn(%c, %d) {INIT = 14 : ui64} : (i1, i1) -> i1\n"
       "    hw.output %0, %1 : i1, i1\n"
       "  }\n"
-      "}\n";
+      "}\n"
       // clang-format on
+      ;
   // Compare the expected and actual IR without whitespace
   EXPECT_EQ(canonizeIRString(expected), canonizeIRString(ir));
 }
