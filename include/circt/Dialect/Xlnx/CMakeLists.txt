@@ -5,7 +5,7 @@ set(DIALECT_NAMESPACE xlnx)
 set(DIALECT_DESCRIPTION "Xilinx dialect")
 set(DIALECT_DEPENDS "circt::mlir::IR")
 set(DIALECT_DIR ${DIALECT_NAME})
-set(DIALECT_INC_GEN_PREFIX "CIRCT${DIALECT_NAME}")
+set(DIALECT_INC_GEN_PREFIX "${DIALECT_NAME}")
 set(XLNX_INC_GEN_DEPS "")
 
 # Add dialect
@@ -37,3 +37,11 @@ mlir_tablegen(${DIALECT_INC_GEN_PREFIX}Ops.cpp.inc -gen-op-defs)
 add_public_tablegen_target(${DIALECT_INC_GEN_PREFIX}OpsIncGen)
 add_dependencies(circt-headers ${DIALECT_INC_GEN_PREFIX}OpsIncGen)
 list(APPEND XLNX_INC_GEN_DEPS ${DIALECT_INC_GEN_PREFIX}OpsIncGen)
+
+# Generate dialect interfaces
+set(LLVM_TARGET_DEFINITIONS ${DIALECT_NAME}OpInterfaces.td)
+mlir_tablegen(${DIALECT_INC_GEN_PREFIX}OpInterfaces.h.inc -gen-op-interface-decls)
+mlir_tablegen(${DIALECT_INC_GEN_PREFIX}OpInterfaces.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(${DIALECT_INC_GEN_PREFIX}OpInterfacesIncGen)
+add_dependencies(circt-headers ${DIALECT_INC_GEN_PREFIX}OpInterfacesIncGen)
+list(APPEND XLNX_INC_GEN_DEPS ${DIALECT_INC_GEN_PREFIX}OpInterfacesIncGen)

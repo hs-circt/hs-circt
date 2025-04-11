@@ -6,8 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO:
+// - Add interface to get primitive module name
+// - Add attribute to LutN to specify N number of inputs
+// - Modify INIT attribute size to match input size, should not be 64-bit
+// - Implement FlipFlop primitive
+// - Implement Latch primitive
+
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "circt/Dialect/HW/HWTypes.td"
+include "circt/Dialect/Xlnx/XlnxOpInterfaces.td"
+include "circt/Dialect/Seq/SeqTypes.td"
 include "mlir/Bytecode/BytecodeOpInterface.td"
 include "circt/Dialect/Xlnx/XlnxDialect.td"
 include "circt/Dialect/Xlnx/XlnxTypes.td"
@@ -143,5 +154,66 @@ def XlnxMuxF9Op : XlnxMuxBase<"muxf9"> {
     the MUXF8 elements are connected to the I0 and I1 inputs of the MUXF9. The S input is driven
     from any net. When Low, S selects I0. When High, S selects I1.
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Flip-Flop Operations
+//===----------------------------------------------------------------------===//
+
+def XlnxFDCEOp : XlnxOp<"fdce", [
+    Pure,
+    Clocked,
+    ClockEnabled
+  ]> {
+  let summary = "D Flip-Flop with Clock Enable and Asynchronous Clear";
+  let description = [{
+    Xilinx D-type flip-flop primitive with clock enable and asynchronous clear.
+
+    Features:
+    - Asynchronous clear (CLR) has priority over other inputs
+    - Clock enable (CE) controls data capture
+    - Programmable inversion on C/CLR/D pins
+    - Initialization via GSR or configuration
+
+    Verilog instantiation template:
+    ```verilog
+    FDCE #(
+      .INIT(1'b0),
+      .IS_C_INVERTED(1'b0),
+      .IS_CLR_INVERTED(1'b0), 
+      .IS_D_INVERTED(1'b0)
+    ) FDCE_inst (
+      .Q(Q),
+      .C(C),
+      .CE(CE),
+      .CLR(CLR),
+      .D(D)
+    );
+    ```
+  }];
+
+  let arguments = (ins
+    ClockType:$clock,
+    I1:$clockEnable,
+    I1:$asyncClear,
+    I1:$dataInput,
+    
+    // Configuration Attributes
+    UI1Attr:$INIT,
+    OptionalAttr<UI1Attr>:$IS_C_INVERTED,
+    OptionalAttr<UI1Attr>:$IS_CLR_INVERTED,
+    OptionalAttr<UI1Attr>:$IS_D_INVERTED
+  );
+
+  let results = (outs I1:$dataOutput);
+
+  let assemblyFormat = [{
+    `(` `C` `:` $clock `,` `CE` `:` $clockEnable `,` `CLR` `:` $asyncClear `,` `D` `:` $dataInput `)`
+    attr-dict
+    `:` type($clock) `,` type($clockEnable) `,` type($asyncClear) `,` type($dataInput) `->` type($dataOutput)
+  }];
+
+  let hasVerifier = 1;
+
 }
 

@@ -8,4 +8,5 @@ target_link_libraries(CIRCTXlnxTests
   PUBLIC
   CIRCTXlnx
   CIRCTHW
+  CIRCTSeq
 )

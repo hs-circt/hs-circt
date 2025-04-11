@@ -11,6 +11,7 @@
 
 // clang-format off
 #include "circt/Dialect/Xlnx/XlnxDialect.h"
+#include "circt/Dialect/Seq/SeqTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -19,8 +20,10 @@
 #include "circt/Dialect/Xlnx/XlnxTypes.h"
 
 #define GET_OP_CLASSES
+#include "circt/Dialect/Xlnx/XlnxOpInterfaces.h.inc"
 #include "circt/Dialect/Xlnx/Xlnx.h.inc"
 // clang-format on
+
 
 #include <optional>
 

@@ -9,6 +9,7 @@
 // clang-format off
 #include "circt/Dialect/Xlnx/XlnxOps.h"
 #include "circt/Dialect/Xlnx/XlnxDialect.h"
+
 #include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
@@ -89,6 +90,14 @@ LogicalResult XlnxMuxF7Op::verify() { return success(); }
 LogicalResult XlnxMuxF8Op::verify() { return success(); }
 
 LogicalResult XlnxMuxF9Op::verify() { return success(); }
+
+//===----------------------------------------------------------------------===//  
+// XlnxFDCEOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult XlnxFDCEOp::verify() {
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // TableGen generated logic.
