@@ -552,6 +552,19 @@ def ConvertHWToLLVM : Pass<"convert-hw-to-llvm", "mlir::ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// HWToNetlist
+//===----------------------------------------------------------------------===//
+
+def LowerHWToNetlist : Pass<"lower-hw-to-netlist", "hw::HWModuleOp"> {
+  let summary = "Lower HW to Netlist";
+  let description = [{
+    This pass translates HW to FPGA Netlist.
+  }];
+  let constructor = "circt::createLowerHWToNetlistPass()";
+  let dependentDialects = ["hw::HWDialect", "comb::CombDialect", "seq::SeqDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // HWArithToHW
 //===----------------------------------------------------------------------===//
 

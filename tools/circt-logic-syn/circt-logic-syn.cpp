@@ -34,24 +34,24 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include <fmt/format.h>
-#include <lorina/aiger.hpp>
-#include <lorina/genlib.hpp>
-#include <mockturtle/algorithms/aig_balancing.hpp>
-#include <mockturtle/algorithms/emap.hpp>
-#include <mockturtle/algorithms/lut_mapper.hpp>
-#include <mockturtle/generators/arithmetic.hpp>
-#include <mockturtle/io/aiger_reader.hpp>
-#include <mockturtle/io/genlib_reader.hpp>
-#include <mockturtle/io/write_blif.hpp>
-#include <mockturtle/io/write_verilog.hpp>
-#include <mockturtle/networks/aig.hpp>
-#include <mockturtle/networks/block.hpp>
-#include <mockturtle/utils/name_utils.hpp>
-#include <mockturtle/utils/tech_library.hpp>
-#include <mockturtle/views/cell_view.hpp>
-#include <mockturtle/views/depth_view.hpp>
-#include <mockturtle/views/names_view.hpp>
+
+// mockturtle includes
+#include "fmt/format.h"
+#include "lorina/aiger.hpp"
+#include "lorina/genlib.hpp"
+#include "mockturtle/algorithms/aig_balancing.hpp"
+#include "mockturtle/algorithms/lut_mapper.hpp"
+#include "mockturtle/generators/arithmetic.hpp"
+#include "mockturtle/io/aiger_reader.hpp"
+#include "mockturtle/io/genlib_reader.hpp"
+#include "mockturtle/io/write_blif.hpp"
+#include "mockturtle/io/write_verilog.hpp"
+#include "mockturtle/networks/aig.hpp"
+#include "mockturtle/utils/name_utils.hpp"
+#include "mockturtle/utils/tech_library.hpp"
+#include "mockturtle/views/cell_view.hpp"
+#include "mockturtle/views/depth_view.hpp"
+#include "mockturtle/views/names_view.hpp"
 
 namespace cl = llvm::cl;
 
@@ -97,9 +97,9 @@ static cl::opt<OutputFormat> outputFormat(
 void tryMockturtle() {
   using namespace mockturtle;
 
-  aig_network aig;
+  aig_network aig, tmpaig;
 
-  std::vector<aig_network::signal> a(2), b(2);
+  std::vector<aig_network::signal> a(8), b(8);
   std::generate(a.begin(), a.end(), [&aig]() { return aig.create_pi(); });
   std::generate(b.begin(), b.end(), [&aig]() { return aig.create_pi(); });
   auto carry = aig.create_pi();
@@ -113,6 +113,9 @@ void tryMockturtle() {
 
   klut_network klut = lut_map(aig);
   write_blif(klut, "klut.blif");
+  fmt::print("[i] Lut mapper success\n");
+
+  fmt::print("[i] END2\n");
   fmt::print("[i] Lut mapper success\n");
 }
 

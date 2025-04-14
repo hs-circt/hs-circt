@@ -37,3 +37,7 @@ add_subdirectory(LTLToCore)
 if(CIRCT_SLANG_FRONTEND_ENABLED)
   add_subdirectory(ImportVerilog)
 endif()
+
+if (CIRCT_LOGIC_SYN_ENABLED)
+  add_subdirectory(HWToNetlist)
+endif()

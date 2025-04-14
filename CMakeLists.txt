@@ -643,10 +643,33 @@ if(CIRCT_LOGIC_SYN_ENABLED)
 
   FetchContent_MakeAvailable(mockturtle)
 
-
-  set(CMAKE_CXX_FLAGS ${ORIGINAL_CMAKE_CXX_FLAGS})
-  set(BUILD_SHARED_LIBS ${ORIGINAL_BUILD_SHARED_LIBS})
+  # add_library(mockturtle_internal INTERFACE)
+  foreach(target mockturtle kitty lorina percy parallel_hashmap fmt json bill libabcesop rang libabcsat)
+    if(TARGET ${target})
+      get_target_property(LIB_INTERFACE_PATH ${target} INTERFACE_INCLUDE_DIRECTORIES)
+      set_property(GLOBAL APPEND PROPERTY MOCKTURTLE_INC_EXPORTS ${LIB_INTERFACE_PATH})
+      
+      set_target_properties(${target} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
+      set_property(GLOBAL APPEND PROPERTY CIRCT_EXPORTS ${target})
+      install(TARGETS ${target} EXPORT CIRCTTargets)
+    endif()
+  endforeach()
 endif()
+
+function(add_mockturtle_include_directories TARGET)
+  get_property(MOCKTURTLE_INC_EXPORTS GLOBAL PROPERTY MOCKTURTLE_INC_EXPORTS)
+  if (NOT MOCKTURTLE_INC_EXPORTS)
+    message(STATUS "MOCKTURTLE_INC_EXPORTS is empty, circt-logic-syn might not enabled")
+    return()
+  endif()
+  
+  # foreach(INC ${MOCKTURTLE_INC_EXPORTS})
+  #   message(STATUS "MOCKTURTLE_INC_EXPORTS: ${INC}")
+  # endforeach()
+
+  include_directories(${TARGET} SYSTEM PRIVATE ${MOCKTURTLE_INC_EXPORTS})
+  add_compile_definitions("LIN64" ABC_NAMESPACE=pabc "ABC_NO_USE_READLINE" "DISABLE_NAUTY" "FMT_HEADER_ONLY")
+endfunction()
 
 #-------------------------------------------------------------------------------
 # Arcilator JIT
