@@ -163,7 +163,8 @@ def XlnxMuxF9Op : XlnxMuxBase<"muxf9"> {
 def XlnxFDCEOp : XlnxOp<"fdce", [
     Pure,
     Clocked,
-    ClockEnabled
+    ClockEnabled,
+    AsynchronousControl
   ]> {
   let summary = "D Flip-Flop with Clock Enable and Asynchronous Clear";
   let description = [{
@@ -178,16 +179,9 @@ def XlnxFDCEOp : XlnxOp<"fdce", [
     Verilog instantiation template:
     ```verilog
     FDCE #(
-      .INIT(1'b0),
-      .IS_C_INVERTED(1'b0),
-      .IS_CLR_INVERTED(1'b0), 
-      .IS_D_INVERTED(1'b0)
+      .INIT(1'b0), .IS_C_INVERTED(1'b0), .IS_CLR_INVERTED(1'b0), .IS_D_INVERTED(1'b0)
     ) FDCE_inst (
-      .Q(Q),
-      .C(C),
-      .CE(CE),
-      .CLR(CLR),
-      .D(D)
+      .Q(Q), .C(C), .CE(CE), .CLR(CLR), .D(D)
     );
     ```
   }];
@@ -199,10 +193,10 @@ def XlnxFDCEOp : XlnxOp<"fdce", [
     I1:$dataInput,
     
     // Configuration Attributes
-    UI1Attr:$INIT,
-    OptionalAttr<UI1Attr>:$IS_C_INVERTED,
-    OptionalAttr<UI1Attr>:$IS_CLR_INVERTED,
-    OptionalAttr<UI1Attr>:$IS_D_INVERTED
+    DefaultValuedAttr<UI1Attr, "0">:$INIT,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_C_INVERTED,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_CLR_INVERTED,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_D_INVERTED
   );
 
   let results = (outs I1:$dataOutput);
@@ -215,5 +209,8 @@ def XlnxFDCEOp : XlnxOp<"fdce", [
 
   let hasVerifier = 1;
 
+  let extraClassDeclaration = [{
+    bool isAsynchronous() const { return true; }
+  }];
 }
 
