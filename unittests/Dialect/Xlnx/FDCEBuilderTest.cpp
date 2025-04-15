@@ -363,7 +363,7 @@ TEST_F(XlnxFDCETest, FDCEWithAttributes) {
 
   std::string expectedIR = R"(module {
   hw.module @FDCEWithAttributesModule(in %clock : !seq.clock, in %ce : i1, in %clr : i1, in %d : i1, out q : i1) {
-    %0 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %d) {INIT = 1 : ui1, IS_C_INVERTED = 1 : ui1, IS_CLR_INVERTED = 1 : ui1, IS_D_INVERTED = 1 : ui1} : !seq.clock, i1, i1, i1 -> i1
+    %0 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %d) {INIT = 1 : ui1, IS_CLR_INVERTED = 1 : ui1, IS_C_INVERTED = 1 : ui1, IS_D_INVERTED = 1 : ui1} : !seq.clock, i1, i1, i1 -> i1
     hw.output %0 : i1
   }
 })";
@@ -381,20 +381,20 @@ TEST_F(XlnxFDCETest, FDCECounter) {
   std::string generatedIR = verifyAndPrint(module);
 
   std::string expectedIR = R"(module {
-  hw.module @FDCECounterModule(in %clock : !seq.clock, in %ce : i1, in %clr : i1, out %count : i4) {
+  hw.module @FDCECounterModule(in %clock : !seq.clock, in %ce : i1, in %clr : i1, out count : i4) {
     %c1_i4 = hw.constant 1 : i4
-    %c0_i1 = hw.constant 0 : i1
-    %fdce0 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %d0) {INIT = 0 : i1} : !seq.clock, i1, i1, i1 -> i1
-    %fdce1 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %d1) {INIT = 0 : i1} : !seq.clock, i1, i1, i1 -> i1
-    %fdce2 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %d2) {INIT = 0 : i1} : !seq.clock, i1, i1, i1 -> i1
-    %fdce3 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %d3) {INIT = 0 : i1} : !seq.clock, i1, i1, i1 -> i1
-    %counterVal = comb.concat %fdce0, %fdce1, %fdce2, %fdce3 : i1, i1, i1, i1 -> i4
-    %nextVal = comb.add %counterVal, %c1_i4 : i4
-    %d0 = comb.extract %nextVal from 0 : (i4) -> i1
-    %d1 = comb.extract %nextVal from 1 : (i4) -> i1
-    %d2 = comb.extract %nextVal from 2 : (i4) -> i1
-    %d3 = comb.extract %nextVal from 3 : (i4) -> i1
-    hw.output %counterVal : i4
+    %false = hw.constant false
+    %0 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %6) : !seq.clock, i1, i1, i1 -> i1
+    %1 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %7) : !seq.clock, i1, i1, i1 -> i1
+    %2 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %8) : !seq.clock, i1, i1, i1 -> i1
+    %3 = xlnx.fdce(C : %clock, CE : %ce, CLR : %clr, D : %9) : !seq.clock, i1, i1, i1 -> i1
+    %4 = comb.concat %0, %1, %2, %3 : i1, i1, i1, i1
+    %5 = comb.add %4, %c1_i4 : i4
+    %6 = comb.extract %5 from 0 : (i4) -> i1
+    %7 = comb.extract %5 from 1 : (i4) -> i1
+    %8 = comb.extract %5 from 2 : (i4) -> i1
+    %9 = comb.extract %5 from 3 : (i4) -> i1
+    hw.output %4 : i4
   }
 })";
 
