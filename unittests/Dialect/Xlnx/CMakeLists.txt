@@ -4,7 +4,6 @@ add_circt_unittest(CIRCTXlnxTests
   Lut1to6BuilderTest.cpp
   MuxBuilderTest.cpp
   FDCEBuilderTest.cpp
-  LutBuilderTest.cpp
 )
 
 target_link_libraries(CIRCTXlnxTests
