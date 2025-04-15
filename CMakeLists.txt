@@ -638,22 +638,13 @@ if(CIRCT_LOGIC_SYN_ENABLED)
   else ()
     set(CMAKE_CXX_FLAGS "")
   endif ()
-  set(BUILD_SHARED_LIBS OFF)
-  set(MOCKTURTLE_EXAMPLES OFF)
 
+  set(MOCKTURTLE_EXAMPLES OFF)
   FetchContent_MakeAvailable(mockturtle)
 
-  # add_library(mockturtle_internal INTERFACE)
-  foreach(target mockturtle kitty lorina percy parallel_hashmap fmt json bill libabcesop rang libabcsat)
-    if(TARGET ${target})
-      get_target_property(LIB_INTERFACE_PATH ${target} INTERFACE_INCLUDE_DIRECTORIES)
-      set_property(GLOBAL APPEND PROPERTY MOCKTURTLE_INC_EXPORTS ${LIB_INTERFACE_PATH})
-      
-      set_target_properties(${target} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
-      set_property(GLOBAL APPEND PROPERTY CIRCT_EXPORTS ${target})
-      install(TARGETS ${target} EXPORT CIRCTTargets)
-    endif()
-  endforeach()
+  
+  set(CMAKE_CXX_FLAGS ${ORIGINAL_CMAKE_CXX_FLAGS})
+  set(BUILD_SHARED_LIBS ${ORIGINAL_BUILD_SHARED_LIBS})
 endif()
 
 function(add_mockturtle_include_directories TARGET)

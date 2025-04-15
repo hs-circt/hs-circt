@@ -3,7 +3,6 @@ add_circt_conversion_library(CIRCTHWToNetlist
 
   DEPENDS
   CIRCTConversionPassIncGen
-  # mockturtle
 
   LINK_COMPONENTS
   Core
@@ -13,13 +12,9 @@ add_circt_conversion_library(CIRCTHWToNetlist
   CIRCTSupport
   MLIRLLVMCommonConversion
   MLIRTransforms
-
-  # dummy target, just for checking
-  PUBLIC
-  mockturtle
 )
 
-add_mockturtle_include_directories(CIRCTHWToNetlist)
+target_link_libraries(obj.CIRCTHWToNetlist PRIVATE mockturtle)
 
 llvm_update_compile_flags(CIRCTHWToNetlist)
 mlir_check_all_link_libraries(CIRCTHWToNetlist)
