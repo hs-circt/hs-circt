@@ -33,22 +33,20 @@ struct LutVerify : public LutOpTy {
       return op->emitError() << "requires between 1 and 6 inputs, but got "
                              << numInputs << " inputs";
     }
-    do {
-      static const uint64_t maxValues[] = {
-          (1UL << (1UL << 1)) - 1, // 1 input
-          (1UL << (1UL << 2)) - 1, // 2 inputs
-          (1UL << (1UL << 3)) - 1, // 3 inputs
-          (1UL << (1UL << 4)) - 1, // 4 inputs
-          (1UL << (1UL << 5)) - 1, // 5 inputs
-          0ULL - 1, // 6 inputs, to avoid overflow, it is undefined behavior
-      };
-      if (initValue > maxValues[numInputs - 1]) {
-        assert(op && "op is null");
-        return op->emitError()
-               << "INIT attribute value is too large (" << initValue
-               << ") for the number of inputs (" << numInputs << ")";
-      }
-    } while (0);
+    static constexpr uint64_t maxValues[] = {
+        (1UL << (1UL << 1)) - 1, // 1 input
+        (1UL << (1UL << 2)) - 1, // 2 inputs
+        (1UL << (1UL << 3)) - 1, // 3 inputs
+        (1UL << (1UL << 4)) - 1, // 4 inputs
+        (1UL << (1UL << 5)) - 1, // 5 inputs
+        0ULL - 1, // 6 inputs, to avoid overflow, it is undefined behavior
+    };
+    if (initValue > maxValues[numInputs - 1]) {
+      assert(op && "op is null");
+      return op->emitError()
+              << "INIT attribute value is too large (" << initValue
+              << ") for the number of inputs (" << numInputs << ")";
+    }
     return success();
   }
 };
