@@ -160,6 +160,10 @@ def XlnxMuxF9Op : XlnxMuxBase<"muxf9"> {
 // Flip-Flop Operations
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// FDCE Operation
+//===----------------------------------------------------------------------===//
+
 def XlnxFDCEOp : XlnxOp<"fdce", [
     Pure,
     Clocked,
@@ -171,7 +175,7 @@ def XlnxFDCEOp : XlnxOp<"fdce", [
     Xilinx D-type flip-flop primitive with clock enable and asynchronous clear.
 
     Features:
-    - Asynchronous clear (CLR) has priority over other inputs
+    - Asynchronous clear (CLR) has priority over other inputs and clears Q Low
     - Clock enable (CE) controls data capture
     - Programmable inversion on C/CLR/D pins
     - Initialization via GSR or configuration
@@ -199,7 +203,7 @@ def XlnxFDCEOp : XlnxOp<"fdce", [
     DefaultValuedAttr<UI1Attr, "0">:$IS_D_INVERTED
   );
 
-  let results = (outs I1:$dataOutput);
+  let results = (outs I1:$dataOutput); // Q
 
   let assemblyFormat = [{
     `(` `C` `:` $clock `,` `CE` `:` $clockEnable `,` `CLR` `:` $asyncClear `,` `D` `:` $dataInput `)`
@@ -211,6 +215,188 @@ def XlnxFDCEOp : XlnxOp<"fdce", [
 
   let extraClassDeclaration = [{
     bool isAsynchronous() const { return true; }
+    // Method to get the async control signal, assuming CLR is the control here
+    mlir::Value getAsyncControl() const { return getAsyncClear(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FDPE Operation
+//===----------------------------------------------------------------------===//
+
+def XlnxFDPEOp : XlnxOp<"fdpe", [
+    Pure,
+    Clocked,
+    ClockEnabled,
+    AsynchronousControl
+  ]> {
+  let summary = "D Flip-Flop with Clock Enable and Asynchronous Preset";
+  let description = [{
+    Xilinx D-type flip-flop primitive with clock enable and asynchronous preset.
+
+    Features:
+    - Asynchronous preset (PRE) has priority over other inputs and presets Q High
+    - Clock enable (CE) controls data capture
+    - Programmable inversion on C/PRE/D pins
+    - Initialization via GSR or configuration
+
+    Verilog instantiation template:
+    ```verilog
+    FDPE #(
+      .INIT(1'b1), .IS_C_INVERTED(1'b0), .IS_D_INVERTED(1'b0), .IS_PRE_INVERTED(1'b0)
+    ) FDPE_inst (
+      .Q(Q), .C(C), .CE(CE), .D(D), .PRE(PRE)
+    );
+    ```
+  }];
+
+  let arguments = (ins
+    ClockType:$clock,
+    I1:$clockEnable,
+    I1:$asyncPreset,  // PRE
+    I1:$dataInput,    // D
+    
+    // Configuration Attributes
+    DefaultValuedAttr<UI1Attr, "0">:$INIT,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_C_INVERTED,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_D_INVERTED,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_PRE_INVERTED
+  );
+
+  let results = (outs I1:$dataOutput); // Q
+
+  let assemblyFormat = [{
+    `(` `C` `:` $clock `,` `CE` `:` $clockEnable `,` `PRE` `:` $asyncPreset `,` `D` `:` $dataInput `)`
+    attr-dict
+    `:` type($clock) `,` type($clockEnable) `,` type($asyncPreset) `,` type($dataInput) `->` type($dataOutput)
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isAsynchronous() const { return true; }
+    // Method to get the async control signal, assuming PRE is the control here
+    mlir::Value getAsyncControl() const { return getAsyncPreset(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FDRE Operation
+//===----------------------------------------------------------------------===//
+
+def XlnxFDREOp : XlnxOp<"fdre", [
+    Pure,
+    Clocked,
+    ClockEnabled,
+    SynchronousControl
+  ]> {
+  let summary = "D Flip-Flop with Clock Enable and Synchronous Reset";
+  let description = [{
+    Xilinx D-type flip-flop primitive with clock enable and synchronous reset.
+
+    Features:
+    - Synchronous reset (R) overrides other inputs on the clock edge and resets Q Low
+    - Clock enable (CE) controls data capture
+    - Programmable inversion on C/R/D pins
+    - Initialization via GSR or configuration
+
+    Verilog instantiation template:
+    ```verilog
+    FDRE #(
+      .INIT(1'b0), .IS_C_INVERTED(1'b0), .IS_D_INVERTED(1'b0), .IS_R_INVERTED(1'b0)
+    ) FDRE_inst (
+      .Q(Q), .C(C), .CE(CE), .D(D), .R(R)
+    );
+    ```
+  }];
+
+  let arguments = (ins
+    ClockType:$clock,
+    I1:$clockEnable,
+    I1:$syncReset,    // R
+    I1:$dataInput,    // D
+    
+    // Configuration Attributes
+    DefaultValuedAttr<UI1Attr, "0">:$INIT,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_C_INVERTED,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_D_INVERTED,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_R_INVERTED
+  );
+
+  let results = (outs I1:$dataOutput); // Q
+
+  let assemblyFormat = [{
+    `(` `C` `:` $clock `,` `CE` `:` $clockEnable `,` `R` `:` $syncReset `,` `D` `:` $dataInput `)`
+    attr-dict
+    `:` type($clock) `,` type($clockEnable) `,` type($syncReset) `,` type($dataInput) `->` type($dataOutput)
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isSynchronous() const { return true; }
+    // Method to get the sync control signal, assuming R is the control here
+    mlir::Value getSyncControl() const { return getSyncReset(); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FDSE Operation
+//===----------------------------------------------------------------------===//
+
+def XlnxFDSEOp : XlnxOp<"fdse", [
+    Pure,
+    Clocked,
+    ClockEnabled,
+    SynchronousControl
+  ]> {
+  let summary = "D Flip-Flop with Clock Enable and Synchronous Set";
+  let description = [{
+    Xilinx D-type flip-flop primitive with clock enable and synchronous set.
+
+    Features:
+    - Synchronous set (S) overrides other inputs on the clock edge and sets Q High
+    - Clock enable (CE) controls data capture
+    - Programmable inversion on C/S/D pins
+    - Initialization via GSR or configuration
+
+    Verilog instantiation template:
+    ```verilog
+    FDSE #(
+      .INIT(1'b1), .IS_C_INVERTED(1'b0), .IS_D_INVERTED(1'b0), .IS_S_INVERTED(1'b0)
+    ) FDSE_inst (
+      .Q(Q), .C(C), .CE(CE), .D(D), .S(S)
+    );
+    ```
+  }];
+
+  let arguments = (ins
+    ClockType:$clock,
+    I1:$clockEnable,
+    I1:$syncSet,      // S
+    I1:$dataInput,    // D
+    
+    // Configuration Attributes
+    DefaultValuedAttr<UI1Attr, "0">:$INIT,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_C_INVERTED,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_D_INVERTED,
+    DefaultValuedAttr<UI1Attr, "0">:$IS_S_INVERTED
+  );
+
+  let results = (outs I1:$dataOutput); // Q
+
+  let assemblyFormat = [{
+    `(` `C` `:` $clock `,` `CE` `:` $clockEnable `,` `S` `:` $syncSet `,` `D` `:` $dataInput `)`
+    attr-dict
+    `:` type($clock) `,` type($clockEnable) `,` type($syncSet) `,` type($dataInput) `->` type($dataOutput)
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool isSynchronous() const { return true; }
+    // Method to get the sync control signal, assuming S is the control here
+    mlir::Value getSyncControl() const { return getSyncSet(); }
   }];
 }
 
