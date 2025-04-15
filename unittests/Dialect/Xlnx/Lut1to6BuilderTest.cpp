@@ -19,12 +19,14 @@
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/SmallVector.h"
 #include "gtest/gtest.h"
+#include "XlnxTestUtils.h"
 // clang-format on
 
 using namespace mlir;
 using namespace circt;
 using namespace circt::xlnx;
 using namespace circt::hw;
+using namespace circt::xlnx_test;
 
 namespace {
 
@@ -363,25 +365,6 @@ protected:
     EXPECT_FALSE(failed(verify(op)));
     op->print(os);
     return result;
-  }
-
-  bool isVisibleChar(char c) {
-    return !isspace(c) && !iscntrl(c) && c != '\n' && c != '\r' && c != '\t';
-  }
-
-  std::string canonizeIRString(const std::string &ir) {
-    std::stringstream canonization;
-    bool lastWasVisible = false;
-    for (char c : ir) {
-      if (isVisibleChar(c)) {
-        canonization << c;
-        lastWasVisible = true;
-      } else if (lastWasVisible) {
-        canonization << ' ';
-        lastWasVisible = false;
-      }
-    }
-    return canonization.str();
   }
 
   DialectRegistry registry;
