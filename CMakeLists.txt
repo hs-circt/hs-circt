@@ -610,6 +610,59 @@ if(CIRCT_SLANG_FRONTEND_ENABLED)
 endif()
 
 #-------------------------------------------------------------------------------
+# Build Logic Synthesizer
+#-------------------------------------------------------------------------------
+
+option(CIRCT_LOGIC_SYN_ENABLED "Enables the logic synthesizer." ON)
+option(CIRCT_LOGIC_SYN_BUILD_FROM_SOURCE
+  "Build logic synthesizer from source instead of finding an installed package" ON)
+
+llvm_canonicalize_cmake_booleans(CIRCT_LOGIC_SYN_ENABLED)
+
+if(CIRCT_LOGIC_SYN_ENABLED)
+  message(STATUS "Logic Synthesizer tool is enabled")
+  # Build EPFL logic synthesis libraries as part of CIRCT (see https://github.com/lsils/mockturtle)
+  message(STATUS "Building EPFL logic synthesis libraries from source")
+  include(FetchContent)
+  FetchContent_Declare(
+    mockturtle
+    GIT_REPOSITORY https://github.com/lsils/mockturtle.git
+    GIT_TAG f2396ece21f7f17bb7f4de6c81a34343eab0a13b)
+  set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE "NEVER")
+
+  set(ORIGINAL_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  set(ORIGINAL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+
+  if (MSVC)
+    set(CMAKE_CXX_FLAGS "/EHsc")
+  else ()
+    set(CMAKE_CXX_FLAGS "")
+  endif ()
+
+  set(MOCKTURTLE_EXAMPLES OFF)
+  FetchContent_MakeAvailable(mockturtle)
+
+  
+  set(CMAKE_CXX_FLAGS ${ORIGINAL_CMAKE_CXX_FLAGS})
+  set(BUILD_SHARED_LIBS ${ORIGINAL_BUILD_SHARED_LIBS})
+endif()
+
+function(add_mockturtle_include_directories TARGET)
+  get_property(MOCKTURTLE_INC_EXPORTS GLOBAL PROPERTY MOCKTURTLE_INC_EXPORTS)
+  if (NOT MOCKTURTLE_INC_EXPORTS)
+    message(STATUS "MOCKTURTLE_INC_EXPORTS is empty, circt-logic-syn might not enabled")
+    return()
+  endif()
+  
+  # foreach(INC ${MOCKTURTLE_INC_EXPORTS})
+  #   message(STATUS "MOCKTURTLE_INC_EXPORTS: ${INC}")
+  # endforeach()
+
+  include_directories(${TARGET} SYSTEM PRIVATE ${MOCKTURTLE_INC_EXPORTS})
+  add_compile_definitions("LIN64" ABC_NAMESPACE=pabc "ABC_NO_USE_READLINE" "DISABLE_NAUTY" "FMT_HEADER_ONLY")
+endfunction()
+
+#-------------------------------------------------------------------------------
 # Arcilator JIT
 #-------------------------------------------------------------------------------
 
