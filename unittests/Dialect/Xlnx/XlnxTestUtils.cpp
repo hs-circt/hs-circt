@@ -3,13 +3,15 @@
 namespace circt {
 namespace xlnx_test {
 
-// Helper function to check if a character is visible (non-whitespace, non-control)
+// Helper function to check if a character is visible (non-whitespace,
+// non-control)
 bool isVisibleChar(char c) {
-  return !std::isspace(c) && !std::iscntrl(c) && c != '\n' && c != '\r' && c != '\t';
+  return !std::isspace(c) && !std::iscntrl(c) && c != '\n' && c != '\r' &&
+         c != '\t';
 }
 
-// Canonize an IR string to ignore SSA value name differences and whitespace variations.
-// This helps in comparing generated IR against expected IR strings.
+// Canonize an IR string to ignore SSA value name differences and whitespace
+// variations. This helps in comparing generated IR against expected IR strings.
 std::string canonizeIRString(const std::string &ir) {
   std::stringstream canonization;
   bool lastWasVisible = false;
@@ -32,4 +34,4 @@ std::string canonizeIRString(const std::string &ir) {
 }
 
 } // namespace xlnx_test
-} // namespace circt 
+} // namespace circt

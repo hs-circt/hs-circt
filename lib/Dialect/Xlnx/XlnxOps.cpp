@@ -91,13 +91,11 @@ LogicalResult XlnxMuxF8Op::verify() { return success(); }
 
 LogicalResult XlnxMuxF9Op::verify() { return success(); }
 
-//===----------------------------------------------------------------------===//  
+//===----------------------------------------------------------------------===//
 // XlnxFDCEOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult XlnxFDCEOp::verify() {
-  return success();
-}
+LogicalResult XlnxFDCEOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
 // TableGen generated logic.

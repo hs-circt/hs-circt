@@ -24,7 +24,6 @@
 #include "circt/Dialect/Xlnx/Xlnx.h.inc"
 // clang-format on
 
-
 #include <optional>
 
 namespace circt {

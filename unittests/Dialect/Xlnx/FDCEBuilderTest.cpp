@@ -1,4 +1,4 @@
-//===- FDCEBuilderTest.cpp - Tests for FDCE operations ---------------------===//
+//===- FDCEBuilderTest.cpp - Tests for FDCE operations --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,15 +39,18 @@ class XlnxFDCETest : public testing::Test {
 protected:
   void SetUp() override {
     // Register dialects
-    registry.insert<hw::HWDialect, xlnx::XlnxDialect, seq::SeqDialect, comb::CombDialect>();
+    registry.insert<hw::HWDialect, xlnx::XlnxDialect, seq::SeqDialect,
+                    comb::CombDialect>();
     context = std::make_unique<MLIRContext>(registry);
     // Ensure dialects are loaded
-    context->loadDialect<hw::HWDialect, xlnx::XlnxDialect, seq::SeqDialect, comb::CombDialect>();
+    context->loadDialect<hw::HWDialect, xlnx::XlnxDialect, seq::SeqDialect,
+                         comb::CombDialect>();
     context->allowUnregisteredDialects();
   }
 
   // Verilog equivalent:
-  // module BasicFDCEModule(input clock, input ce, input clr, input d, output q);
+  // module BasicFDCEModule(input clock, input ce, input clr, input d, output
+  // q);
   //   FDCE fdce_inst (
   //     .C(clock),
   //     .CE(ce),
@@ -99,7 +102,8 @@ protected:
   }
 
   // Verilog equivalent:
-  // module FDCEWithAttributesModule(input clock, input ce, input clr, input d, output q);
+  // module FDCEWithAttributesModule(input clock, input ce, input clr, input d,
+  // output q);
   //   FDCE #(
   //     .INIT(1'b1),
   //     .IS_C_INVERTED(1'b1),
@@ -150,9 +154,12 @@ protected:
     auto fdce = builder.create<XlnxFDCEOp>(
         clock, ce, clr, d,
         builder.getIntegerAttr(builder.getIntegerType(1, false), 1), // INIT
-        builder.getIntegerAttr(builder.getIntegerType(1, false), 1), // IS_C_INVERTED
-        builder.getIntegerAttr(builder.getIntegerType(1, false), 1), // IS_CLR_INVERTED
-        builder.getIntegerAttr(builder.getIntegerType(1, false), 1)  // IS_D_INVERTED
+        builder.getIntegerAttr(builder.getIntegerType(1, false),
+                               1), // IS_C_INVERTED
+        builder.getIntegerAttr(builder.getIntegerType(1, false),
+                               1), // IS_CLR_INVERTED
+        builder.getIntegerAttr(builder.getIntegerType(1, false),
+                               1) // IS_D_INVERTED
     );
 
     // Create output
@@ -162,14 +169,17 @@ protected:
   }
 
   // Verilog equivalent:
-  // module FDCECounterModule(input clock, input ce, input clr, output [3:0] count);
+  // module FDCECounterModule(input clock, input ce, input clr, output [3:0]
+  // count);
   //   reg [3:0] count_reg;
   //   wire [3:0] next_count = count_reg + 4'b1;
   //
-  //   FDCE #(.INIT(1'b0)) count_ff0 (.C(clock), .CE(ce), .CLR(clr), .D(next_count[0]), .Q(count_reg[0]));
-  //   FDCE #(.INIT(1'b0)) count_ff1 (.C(clock), .CE(ce), .CLR(clr), .D(next_count[1]), .Q(count_reg[1]));
-  //   FDCE #(.INIT(1'b0)) count_ff2 (.C(clock), .CE(ce), .CLR(clr), .D(next_count[2]), .Q(count_reg[2]));
-  //   FDCE #(.INIT(1'b0)) count_ff3 (.C(clock), .CE(ce), .CLR(clr), .D(next_count[3]), .Q(count_reg[3]));
+  //   FDCE #(.INIT(1'b0)) count_ff0 (.C(clock), .CE(ce), .CLR(clr),
+  //   .D(next_count[0]), .Q(count_reg[0])); FDCE #(.INIT(1'b0)) count_ff1
+  //   (.C(clock), .CE(ce), .CLR(clr), .D(next_count[1]), .Q(count_reg[1]));
+  //   FDCE #(.INIT(1'b0)) count_ff2 (.C(clock), .CE(ce), .CLR(clr),
+  //   .D(next_count[2]), .Q(count_reg[2])); FDCE #(.INIT(1'b0)) count_ff3
+  //   (.C(clock), .CE(ce), .CLR(clr), .D(next_count[3]), .Q(count_reg[3]));
   //
   //   assign count = count_reg;
   // endmodule
@@ -246,7 +256,8 @@ protected:
   }
 
   // Verilog equivalent:
-  // module FDCEToggleModule(input clock, input ce, input clr, input toggle, output q);
+  // module FDCEToggleModule(input clock, input ce, input clr, input toggle,
+  // output q);
   //   reg state_reg;
   //   wire next_state;
   //   wire should_toggle = toggle & ce;
@@ -302,9 +313,9 @@ protected:
     Value placeholderD_toggle = builder.create<hw::ConstantOp>(i1Type, 0);
 
     // Create toggle flip-flop state register
-    auto state = builder.create<XlnxFDCEOp>(clock, ce, clr,
-                                           placeholderD_toggle,
-                                           builder.getIntegerAttr(builder.getIntegerType(1, false), 0));
+    auto state = builder.create<XlnxFDCEOp>(
+        clock, ce, clr, placeholderD_toggle,
+        builder.getIntegerAttr(builder.getIntegerType(1, false), 0));
 
     // Calculate the should_toggle condition
     auto should_toggle = builder.create<comb::AndOp>(toggle, ce);
@@ -313,7 +324,8 @@ protected:
     auto toggled_state = builder.create<comb::XorOp>(state.getResult(), c1_i1);
 
     // Calculate the next state based on the toggle condition
-    auto next_state = builder.create<comb::MuxOp>(should_toggle, toggled_state, state.getResult());
+    auto next_state = builder.create<comb::MuxOp>(should_toggle, toggled_state,
+                                                  state.getResult());
 
     // Connect the next_state to the FDCE D input
     state.getOperation()->setOperand(3, next_state);
@@ -349,7 +361,8 @@ TEST_F(XlnxFDCETest, BasicFDCE) {
   }
 })";
 
-  // Canonize both strings to ignore SSA value name differences and whitespace variations
+  // Canonize both strings to ignore SSA value name differences and whitespace
+  // variations
   std::string canonGenerated = canonizeIRString(generatedIR);
   std::string canonExpected = canonizeIRString(expectedIR);
 
@@ -367,8 +380,9 @@ TEST_F(XlnxFDCETest, FDCEWithAttributes) {
     hw.output %0 : i1
   }
 })";
-  
-  // Canonize both strings to ignore SSA value name differences and whitespace variations
+
+  // Canonize both strings to ignore SSA value name differences and whitespace
+  // variations
   std::string canonGenerated = canonizeIRString(generatedIR);
   std::string canonExpected = canonizeIRString(expectedIR);
 
@@ -398,7 +412,8 @@ TEST_F(XlnxFDCETest, FDCECounter) {
   }
 })";
 
-  // Canonize both strings to ignore SSA value name differences and whitespace variations
+  // Canonize both strings to ignore SSA value name differences and whitespace
+  // variations
   std::string canonGenerated = canonizeIRString(generatedIR);
   std::string canonExpected = canonizeIRString(expectedIR);
 
@@ -422,10 +437,11 @@ TEST_F(XlnxFDCETest, FDCEToggle) {
   }
 })";
 
-  // Canonize both strings to ignore SSA value name differences and whitespace variations
+  // Canonize both strings to ignore SSA value name differences and whitespace
+  // variations
   std::string canonGenerated = canonizeIRString(generatedIR);
   std::string canonExpected = canonizeIRString(expectedIR);
 
   EXPECT_EQ(canonGenerated, canonExpected);
 }
-} // end namespace 
+} // end namespace
