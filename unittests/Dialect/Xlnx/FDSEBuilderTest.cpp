@@ -153,13 +153,9 @@ protected:
     auto fdse = builder.create<XlnxFDSEOp>(
         clock, ce, s, d,
         builder.getIntegerAttr(builder.getIntegerType(1, false), 1),
-        builder.getIntegerAttr(builder.getIntegerType(1, false),
-                               1),
-        builder.getIntegerAttr(builder.getIntegerType(1, false),
-                               1),
-        builder.getIntegerAttr(builder.getIntegerType(1, false),
-                               1)
-    );
+        builder.getIntegerAttr(builder.getIntegerType(1, false), 1),
+        builder.getIntegerAttr(builder.getIntegerType(1, false), 1),
+        builder.getIntegerAttr(builder.getIntegerType(1, false), 1));
 
     // Create output
     hwModule.appendOutput("q", fdse.getResult());
@@ -443,4 +439,4 @@ TEST_F(XlnxFDSETest, FDSEToggle) {
 
   EXPECT_EQ(canonGenerated, canonExpected);
 }
-} // end namespace 
+} // end namespace

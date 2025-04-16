@@ -155,10 +155,17 @@ protected:
 
     // Create attributes array for non-default values
     SmallVector<NamedAttribute> attributes;
-    attributes.push_back(builder.getNamedAttr("init", builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
-    attributes.push_back(builder.getNamedAttr("is_c_inverted", builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
-    attributes.push_back(builder.getNamedAttr("is_d_inverted", builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
-    attributes.push_back(builder.getNamedAttr("is_pre_inverted", builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
+    attributes.push_back(builder.getNamedAttr(
+        "INIT", builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
+    attributes.push_back(builder.getNamedAttr(
+        "IS_C_INVERTED",
+        builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
+    attributes.push_back(builder.getNamedAttr(
+        "IS_D_INVERTED",
+        builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
+    attributes.push_back(builder.getNamedAttr(
+        "IS_PRE_INVERTED",
+        builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
 
     // Create FDPE using ValueRange and NamedAttribute array
     auto fdpe = builder.create<XlnxFDPEOp>(operands, attributes);
@@ -227,7 +234,8 @@ protected:
     // Create FDPEs with placeholder D inputs first
     // INIT defaults to 1'b0 for FDPE
     for (int i = 0; i < 4; i++) {
-      auto fdpeOp = builder.create<XlnxFDPEOp>(clock, ce, pre, placeholderD); // Changed op type
+      auto fdpeOp = builder.create<XlnxFDPEOp>(clock, ce, pre,
+                                               placeholderD); // Changed op type
       counterOps.push_back(fdpeOp);
       counterResults.push_back(fdpeOp.getResult());
     }
@@ -302,7 +310,8 @@ protected:
 
     // Create FDPE flip-flop for toggle logic
     // INIT defaults to 1'b0 for FDPE
-    auto fdpeOp = builder.create<XlnxFDPEOp>(clock, ce, pre, placeholderD); // Changed op type
+    auto fdpeOp = builder.create<XlnxFDPEOp>(clock, ce, pre,
+                                             placeholderD); // Changed op type
 
     // Compute next state (invert current state)
     Value currentQ = fdpeOp.getResult();
@@ -341,7 +350,8 @@ TEST_F(XlnxFDPETest, BasicFDPE) {
     hw.output %0 : i1
   }
 })";
-  EXPECT_EQ(canonizeIRString(verifyAndPrint(topModule)), canonizeIRString(expectedIR));
+  EXPECT_EQ(canonizeIRString(verifyAndPrint(topModule)),
+            canonizeIRString(expectedIR));
 }
 
 // Test case for FDPE operation with attributes
@@ -353,11 +363,12 @@ TEST_F(XlnxFDPETest, FDPEWithAttributes) {
   // Attribute order: init, is_c_inverted, is_d_inverted, is_pre_inverted
   std::string expectedIR = R"(module {
   hw.module @FDPEWithAttributesModule(in %clock : !seq.clock, in %ce : i1, in %pre : i1, in %d : i1, out q : i1) {
-    %0 = xlnx.fdpe(C : %clock, CE : %ce, PRE : %pre, D : %d) {init = 1 : ui1, is_c_inverted = 1 : ui1, is_d_inverted = 1 : ui1, is_pre_inverted = 1 : ui1} : !seq.clock, i1, i1, i1 -> i1
+    %0 = xlnx.fdpe(C : %clock, CE : %ce, PRE : %pre, D : %d) {IS_C_INVERTED = 1 : ui1, IS_D_INVERTED = 1 : ui1, IS_PRE_INVERTED = 1 : ui1} : !seq.clock, i1, i1, i1 -> i1
     hw.output %0 : i1
   }
 })";
-  EXPECT_EQ(canonizeIRString(verifyAndPrint(topModule)), canonizeIRString(expectedIR));
+  EXPECT_EQ(canonizeIRString(verifyAndPrint(topModule)),
+            canonizeIRString(expectedIR));
 }
 
 // Test case for FDPE counter
@@ -381,7 +392,8 @@ TEST_F(XlnxFDPETest, FDPECounter) {
     hw.output %4 : i4
   }
 })";
-  EXPECT_EQ(canonizeIRString(verifyAndPrint(topModule)), canonizeIRString(expectedIR));
+  EXPECT_EQ(canonizeIRString(verifyAndPrint(topModule)),
+            canonizeIRString(expectedIR));
 }
 
 // Test case for FDPE toggle logic
@@ -397,7 +409,8 @@ TEST_F(XlnxFDPETest, FDPEToggle) {
     hw.output %0 : i1
   }
 })";
-  EXPECT_EQ(canonizeIRString(verifyAndPrint(topModule)), canonizeIRString(expectedIR));
+  EXPECT_EQ(canonizeIRString(verifyAndPrint(topModule)),
+            canonizeIRString(expectedIR));
 }
 
 } // namespace

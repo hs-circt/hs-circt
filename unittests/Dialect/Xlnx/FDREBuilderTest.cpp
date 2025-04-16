@@ -152,10 +152,14 @@ protected:
     // Create FDRE with attributes
     auto fdre = builder.create<XlnxFDREOp>(
         clock, ce, r, d,
-        builder.getIntegerAttr(builder.getIntegerType(1, false), 1), // INIT = 1 (non-default)
-        builder.getIntegerAttr(builder.getIntegerType(1, false), 1), // IS_C_INVERTED = 1
-        builder.getIntegerAttr(builder.getIntegerType(1, false), 1), // IS_D_INVERTED = 1
-        builder.getIntegerAttr(builder.getIntegerType(1, false), 1) // IS_R_INVERTED = 1
+        builder.getIntegerAttr(builder.getIntegerType(1, false),
+                               1), // INIT = 1 (non-default)
+        builder.getIntegerAttr(builder.getIntegerType(1, false),
+                               1), // IS_C_INVERTED = 1
+        builder.getIntegerAttr(builder.getIntegerType(1, false),
+                               1), // IS_D_INVERTED = 1
+        builder.getIntegerAttr(builder.getIntegerType(1, false),
+                               1) // IS_R_INVERTED = 1
     );
 
     // Create output
