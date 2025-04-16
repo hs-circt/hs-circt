@@ -6,6 +6,7 @@ add_circt_unittest(CIRCTXlnxTests
   FDCEBuilderTest.cpp
   FDSEBuilderTest.cpp
   FDPEBuilderTest.cpp
+  FDREBuilderTest.cpp
 )
 
 target_link_libraries(CIRCTXlnxTests
