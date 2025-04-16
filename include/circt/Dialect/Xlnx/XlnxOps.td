@@ -163,7 +163,6 @@ def XlnxMuxF9Op : XlnxMuxBase<"muxf9"> {
 // Base class for Xilinx D Flip-Flops with Clock Enable and Control
 class XlnxFDCtrlBase<string mnemonic, list<Trait> traits = []>
     : XlnxOp<mnemonic, !listconcat(traits, [
-        Pure,
         Clocked,
         ClockEnabled
       ])> {
