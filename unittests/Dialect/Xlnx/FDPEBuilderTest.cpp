@@ -80,7 +80,7 @@ protected:
     // Append input ports
     hwModule.appendInput("clock", clockType);
     hwModule.appendInput("ce", i1Type);
-    hwModule.appendInput("pre", i1Type); // Changed from clr to pre
+    hwModule.appendInput("pre", i1Type);
     hwModule.appendInput("d", i1Type);
 
     // Create module body
@@ -89,11 +89,11 @@ protected:
     // Get input ports
     Value clock = hwModule.getBodyBlock()->getArgument(0);
     Value ce = hwModule.getBodyBlock()->getArgument(1);
-    Value pre = hwModule.getBodyBlock()->getArgument(2); // Changed from clr to pre
+    Value pre = hwModule.getBodyBlock()->getArgument(2);
     Value d = hwModule.getBodyBlock()->getArgument(3);
 
     // Create FDPE
-    auto fdpe = builder.create<XlnxFDPEOp>(clock, ce, pre, d); // Changed op type
+    auto fdpe = builder.create<XlnxFDPEOp>(clock, ce, pre, d);
 
     // Create output
     hwModule.appendOutput("q", fdpe.getResult());
@@ -107,12 +107,13 @@ protected:
   //   FDPE #(
   //     .INIT(1'b1),         // Non-default INIT
   //     .IS_C_INVERTED(1'b1),
-  //     .IS_PRE_INVERTED(1'b1), // Changed from IS_CLR_INVERTED
+  //     .IS_CE_INVERTED(1'b1),
+  //     .IS_PRE_INVERTED(1'b1),
   //     .IS_D_INVERTED(1'b1)
   //   ) fdpe_inst (
   //     .C(clock),
   //     .CE(ce),
-  //     .PRE(pre),           // Changed from CLR
+  //     .PRE(pre),
   //     .D(d),
   //     .Q(q)
   //   );
@@ -138,7 +139,7 @@ protected:
     // Append input ports
     hwModule.appendInput("clock", clockType);
     hwModule.appendInput("ce", i1Type);
-    hwModule.appendInput("pre", i1Type); // Changed from clr to pre
+    hwModule.appendInput("pre", i1Type);
     hwModule.appendInput("d", i1Type);
 
     // Create module body
@@ -147,7 +148,7 @@ protected:
     // Get input ports
     Value clock = hwModule.getBodyBlock()->getArgument(0);
     Value ce = hwModule.getBodyBlock()->getArgument(1);
-    Value pre = hwModule.getBodyBlock()->getArgument(2); // Changed from clr to pre
+    Value pre = hwModule.getBodyBlock()->getArgument(2);
     Value d = hwModule.getBodyBlock()->getArgument(3);
 
     // Collect operands
@@ -207,7 +208,7 @@ protected:
     // Append input ports
     hwModule.appendInput("clock", clockType);
     hwModule.appendInput("ce", i1Type);
-    hwModule.appendInput("pre", i1Type); // Changed from clr to pre
+    hwModule.appendInput("pre", i1Type);
 
     // Create module body
     builder.setInsertionPointToStart(hwModule.getBodyBlock());
@@ -215,7 +216,7 @@ protected:
     // Get input ports
     Value clock = hwModule.getBodyBlock()->getArgument(0);
     Value ce = hwModule.getBodyBlock()->getArgument(1);
-    Value pre = hwModule.getBodyBlock()->getArgument(2); // Changed from clr to pre
+    Value pre = hwModule.getBodyBlock()->getArgument(2);
 
     // Constants
     Value c1_i4 = builder.create<hw::ConstantOp>(i4Type, 1);
@@ -287,7 +288,7 @@ protected:
     // Append input ports
     hwModule.appendInput("clock", clockType);
     hwModule.appendInput("ce", i1Type);
-    hwModule.appendInput("pre", i1Type); // Changed from clr to pre
+    hwModule.appendInput("pre", i1Type);
 
     // Create module body
     builder.setInsertionPointToStart(hwModule.getBodyBlock());
@@ -295,7 +296,7 @@ protected:
     // Get input ports
     Value clock = hwModule.getBodyBlock()->getArgument(0);
     Value ce = hwModule.getBodyBlock()->getArgument(1);
-    Value pre = hwModule.getBodyBlock()->getArgument(2); // Changed from clr to pre
+    Value pre = hwModule.getBodyBlock()->getArgument(2);
 
     // Constant
     Value c1_i1 = builder.create<hw::ConstantOp>(i1Type, 1);

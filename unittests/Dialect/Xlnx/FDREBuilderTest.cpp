@@ -53,7 +53,7 @@ protected:
   //   FDRE fdre_inst (
   //     .C(clock),
   //     .CE(ce),
-  //     .R(r), // Changed from S
+  //     .R(r),
   //     .D(d),
   //     .Q(q)
   //   );
@@ -79,7 +79,7 @@ protected:
     // Append input ports
     hwModule.appendInput("clock", clockType);
     hwModule.appendInput("ce", i1Type);
-    hwModule.appendInput("r", i1Type); // Changed from s
+    hwModule.appendInput("r", i1Type);
     hwModule.appendInput("d", i1Type);
 
     // Create module body
@@ -88,11 +88,11 @@ protected:
     // Get input ports
     Value clock = hwModule.getBodyBlock()->getArgument(0);
     Value ce = hwModule.getBodyBlock()->getArgument(1);
-    Value r = hwModule.getBodyBlock()->getArgument(2); // Changed from s
+    Value r = hwModule.getBodyBlock()->getArgument(2);
     Value d = hwModule.getBodyBlock()->getArgument(3);
 
     // Create FDRE
-    auto fdre = builder.create<XlnxFDREOp>(clock, ce, r, d); // Changed op type
+    auto fdre = builder.create<XlnxFDREOp>(clock, ce, r, d);
 
     // Create output
     hwModule.appendOutput("q", fdre.getResult());
@@ -106,12 +106,12 @@ protected:
   //   FDRE #(
   //     .INIT(1'b1),         // Non-default INIT
   //     .IS_C_INVERTED(1'b1),
-  //     .IS_R_INVERTED(1'b1), // Changed from IS_S_INVERTED
+  //     .IS_R_INVERTED(1'b1),
   //     .IS_D_INVERTED(1'b1)
   //   ) fdre_inst (
   //     .C(clock),
   //     .CE(ce),
-  //     .R(r),             // Changed from S
+  //     .R(r),
   //     .D(d),
   //     .Q(q)
   //   );
@@ -137,7 +137,7 @@ protected:
     // Append input ports
     hwModule.appendInput("clock", clockType);
     hwModule.appendInput("ce", i1Type);
-    hwModule.appendInput("r", i1Type); // Changed from s
+    hwModule.appendInput("r", i1Type);
     hwModule.appendInput("d", i1Type);
 
     // Create module body
@@ -146,12 +146,12 @@ protected:
     // Get input ports
     Value clock = hwModule.getBodyBlock()->getArgument(0);
     Value ce = hwModule.getBodyBlock()->getArgument(1);
-    Value r = hwModule.getBodyBlock()->getArgument(2); // Changed from s
+    Value r = hwModule.getBodyBlock()->getArgument(2);
     Value d = hwModule.getBodyBlock()->getArgument(3);
 
     // Create FDRE with attributes
     auto fdre = builder.create<XlnxFDREOp>(
-        clock, ce, r, d, // Changed op type and r input
+        clock, ce, r, d,
         builder.getIntegerAttr(builder.getIntegerType(1, false), 1), // INIT = 1 (non-default)
         builder.getIntegerAttr(builder.getIntegerType(1, false), 1), // IS_C_INVERTED = 1
         builder.getIntegerAttr(builder.getIntegerType(1, false), 1), // IS_D_INVERTED = 1
@@ -170,12 +170,12 @@ protected:
   //   reg [3:0] count_reg;
   //   wire [3:0] next_count = count_reg + 4'b1;
   //
-  //   FDRE #(.INIT(1'b0)) count_ff0 (.C(clock), .CE(ce), .R(r), // Changed from S
+  //   FDRE #(.INIT(1'b0)) count_ff0 (.C(clock), .CE(ce), .R(r),
   //   .D(next_count[0]), .Q(count_reg[0])); FDRE #(.INIT(1'b0)) count_ff1
-  //   (.C(clock), .CE(ce), .R(r), .D(next_count[1]), .Q(count_reg[1])); // Changed from S
-  //   FDRE #(.INIT(1'b0)) count_ff2 (.C(clock), .CE(ce), .R(r), // Changed from S
+  //   (.C(clock), .CE(ce), .R(r), .D(next_count[1]), .Q(count_reg[1]));
+  //   FDRE #(.INIT(1'b0)) count_ff2 (.C(clock), .CE(ce), .R(r),
   //   .D(next_count[2]), .Q(count_reg[2])); FDRE #(.INIT(1'b0)) count_ff3
-  //   (.C(clock), .CE(ce), .R(r), .D(next_count[3]), .Q(count_reg[3])); // Changed from S
+  //   (.C(clock), .CE(ce), .R(r), .D(next_count[3]), .Q(count_reg[3]));
   //
   //   assign count = count_reg;
   // endmodule
@@ -201,7 +201,7 @@ protected:
     // Append input ports
     hwModule.appendInput("clock", clockType);
     hwModule.appendInput("ce", i1Type);
-    hwModule.appendInput("r", i1Type); // Changed from s
+    hwModule.appendInput("r", i1Type);
 
     // Create module body
     builder.setInsertionPointToStart(hwModule.getBodyBlock());
@@ -209,20 +209,20 @@ protected:
     // Get input ports
     Value clock = hwModule.getBodyBlock()->getArgument(0);
     Value ce = hwModule.getBodyBlock()->getArgument(1);
-    Value r = hwModule.getBodyBlock()->getArgument(2); // Changed from s
+    Value r = hwModule.getBodyBlock()->getArgument(2);
 
     // Constants
     Value c1_i4 = builder.create<hw::ConstantOp>(i4Type, 1);
     Value placeholderD = builder.create<hw::ConstantOp>(i1Type, 0);
 
     // Create 4 FDRE flip-flops for a 4-bit counter
-    SmallVector<XlnxFDREOp, 4> counterOps; // Changed op type
+    SmallVector<XlnxFDREOp, 4> counterOps;
     SmallVector<Value, 4> counterResults;
 
     // Create FDREs with placeholder D inputs first
     // Default INIT for FDRE is 0
     for (int i = 0; i < 4; i++) {
-      auto fdreOp = builder.create<XlnxFDREOp>(clock, ce, r, placeholderD); // Changed op type and r input
+      auto fdreOp = builder.create<XlnxFDREOp>(clock, ce, r, placeholderD);
       counterOps.push_back(fdreOp);
       counterResults.push_back(fdreOp.getResult());
     }
@@ -263,7 +263,7 @@ protected:
   //   FDRE #(.INIT(1'b0)) toggle_ff ( // Default INIT for FDRE is 0
   //     .C(clock),
   //     .CE(ce),
-  //     .R(r),          // Changed from S
+  //     .R(r),
   //     .D(next_state),
   //     .Q(state_reg)
   //   );
@@ -291,7 +291,7 @@ protected:
     // Append input ports
     hwModule.appendInput("clock", clockType);
     hwModule.appendInput("ce", i1Type);
-    hwModule.appendInput("r", i1Type); // Changed from s
+    hwModule.appendInput("r", i1Type);
     hwModule.appendInput("toggle", i1Type);
 
     // Create module body
@@ -300,7 +300,7 @@ protected:
     // Get input ports
     Value clock = hwModule.getBodyBlock()->getArgument(0);
     Value ce = hwModule.getBodyBlock()->getArgument(1);
-    Value r = hwModule.getBodyBlock()->getArgument(2); // Changed from s
+    Value r = hwModule.getBodyBlock()->getArgument(2);
     Value toggle = hwModule.getBodyBlock()->getArgument(3);
 
     // Constants
@@ -309,7 +309,7 @@ protected:
 
     // Create toggle flip-flop state register using FDRE
     // Default INIT for FDRE is 0
-    auto state = builder.create<XlnxFDREOp>(clock, ce, r, placeholderD_toggle); // Changed op type and r input
+    auto state = builder.create<XlnxFDREOp>(clock, ce, r, placeholderD_toggle);
 
     // Calculate the should_toggle condition
     auto should_toggle = builder.create<comb::AndOp>(toggle, ce);
