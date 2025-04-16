@@ -107,7 +107,6 @@ protected:
   //   FDPE #(
   //     .INIT(1'b1),         // Non-default INIT
   //     .IS_C_INVERTED(1'b1),
-  //     .IS_CE_INVERTED(1'b1),
   //     .IS_PRE_INVERTED(1'b1),
   //     .IS_D_INVERTED(1'b1)
   //   ) fdpe_inst (
@@ -159,7 +158,6 @@ protected:
     attributes.push_back(builder.getNamedAttr("init", builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
     attributes.push_back(builder.getNamedAttr("is_c_inverted", builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
     attributes.push_back(builder.getNamedAttr("is_d_inverted", builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
-    attributes.push_back(builder.getNamedAttr("is_ce_inverted", builder.getBoolAttr(true))); // Use BoolAttr as it's the defined type
     attributes.push_back(builder.getNamedAttr("is_pre_inverted", builder.getIntegerAttr(builder.getIntegerType(1, false), 1)));
 
     // Create FDPE using ValueRange and NamedAttribute array
@@ -350,12 +348,12 @@ TEST_F(XlnxFDPETest, BasicFDPE) {
 TEST_F(XlnxFDPETest, FDPEWithAttributes) {
   auto topModule = createFDPEWithAttributesModule();
   ASSERT_TRUE(topModule);
-  // FDPE: init=1, is_c_inverted=1, is_d_inverted=1, is_ce_inverted=1, is_pre_inverted=1
-  // Default: init=0, is_c_inverted=0, is_d_inverted=0, is_ce_inverted=0, is_pre_inverted=0
-  // Attribute order: init, is_c_inverted, is_d_inverted, is_ce_inverted, is_pre_inverted
+  // FDPE: init=1, is_c_inverted=1, is_d_inverted=1, is_pre_inverted=1
+  // Default: init=0, is_c_inverted=0, is_d_inverted=0, is_pre_inverted=0
+  // Attribute order: init, is_c_inverted, is_d_inverted, is_pre_inverted
   std::string expectedIR = R"(module {
   hw.module @FDPEWithAttributesModule(in %clock : !seq.clock, in %ce : i1, in %pre : i1, in %d : i1, out q : i1) {
-    %0 = xlnx.fdpe(C : %clock, CE : %ce, PRE : %pre, D : %d) {init = 1 : ui1, is_c_inverted = 1 : ui1, is_ce_inverted = true, is_d_inverted = 1 : ui1, is_pre_inverted = 1 : ui1} : !seq.clock, i1, i1, i1 -> i1
+    %0 = xlnx.fdpe(C : %clock, CE : %ce, PRE : %pre, D : %d) {init = 1 : ui1, is_c_inverted = 1 : ui1, is_d_inverted = 1 : ui1, is_pre_inverted = 1 : ui1} : !seq.clock, i1, i1, i1 -> i1
     hw.output %0 : i1
   }
 })";
