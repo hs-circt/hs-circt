@@ -1,4 +1,4 @@
-//===- CoreToXlnx.cpp - Core to Xlnx Conversion Pass ------------*- C++ -*-===//
+//===- CoreToXlnx.cpp - Core to Xlnx Conversion Pass ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,8 +51,52 @@ template <>
 struct ClockEnable<CompRegOp> {
   template <typename Op, typename OpAdaptor, typename Rewriter>
   static Value get(Op op, OpAdaptor adaptor, Rewriter &rewriter) {
-    return rewriter.template create<hw::ConstantOp>(op.getLoc(),
-                                                    rewriter.getI1Type(), 1);
+    // Find the parent HWModuleOp.
+    auto hwModule = op->template getParentOfType<hw::HWModuleOp>();
+    Type i1Type = rewriter.getI1Type();
+    IntegerAttr trueAttr = rewriter.getIntegerAttr(i1Type, 1);
+
+    if (!hwModule) {
+      op.emitError("CompRegOp must be inside an hw.module");
+      // Cannot directly signal failure from this helper function.
+      // Fallback to creating a local constant, though this likely indicates
+      // an unexpected IR structure upstream.
+      return rewriter.template create<hw::ConstantOp>(op.getLoc(), trueAttr);
+    }
+
+    Block *moduleBody = hwModule.getBodyBlock();
+    if (!moduleBody) {
+      // Should not happen for a valid HWModuleOp with a body.
+      op.emitError("Parent hw.module has no body block");
+      // Fallback similar to the !hwModule case.
+      return rewriter.template create<hw::ConstantOp>(op.getLoc(), trueAttr);
+    }
+
+    // Search the HW module's top-level operations for an existing `hw.constant
+    // true : i1`.
+    Value existingConstantValue;
+    for (Operation &topOp : moduleBody->getOperations()) {
+      if (auto constantOp = dyn_cast<hw::ConstantOp>(topOp)) {
+        if (constantOp.getType() == i1Type && constantOp.getValue().isOne()) {
+          existingConstantValue = constantOp.getResult();
+          break; // Found the constant, no need to search further.
+        }
+      }
+      // Note: We search the entire top level first to ensure we find *any*
+      // suitable constant, rather than optimizing for dominance prematurely.
+    }
+
+    // Return the existing constant if found.
+    if (existingConstantValue)
+      return existingConstantValue;
+
+    // Otherwise, create a new constant at the beginning of the HW module body.
+    OpBuilder::InsertionGuard guard(
+        rewriter); // Saves/restores insertion point.
+    rewriter.setInsertionPointToStart(moduleBody);
+    // Use the HW module's location for the new constant operation.
+    return rewriter.template create<hw::ConstantOp>(hwModule.getLoc(),
+                                                    trueAttr);
   }
 };
 
