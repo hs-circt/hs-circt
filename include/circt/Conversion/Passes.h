@@ -48,6 +48,7 @@
 #include "circt/Conversion/SimToSV.h"
 #include "circt/Conversion/VerifToSMT.h"
 #include "circt/Conversion/VerifToSV.h"
+#include "circt/Conversion/CoreToXlnx.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
