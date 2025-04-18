@@ -11,15 +11,6 @@ add_circt_conversion_library(CIRCTCoreMemoryMapping
   CIRCTComb
   CIRCTDebug
   CIRCTHW
-  CIRCTLLHD
-  CIRCTMoore
-  CIRCTSim
-  CIRCTVerif
   CIRCTTransforms
-  MLIRControlFlowDialect
-  MLIRFuncDialect
-  MLIRSCFDialect
-  MLIRSCFToControlFlow
-  MLIRSideEffectInterfaces
   MLIRTransforms
 )
