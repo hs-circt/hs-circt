@@ -15,5 +15,16 @@ module {
     %reg2 = seq.compreg.ce %in, %clock, %clock_en reset %reset0, %c0_i1 : i1
     hw.output %reg0, %reg1, %reg2 : i1, i1, i1
   }
+
+  // CHECK-LABEL: hw.module @WideDoubleReg
+  hw.module @WideDoubleReg(in %clock : !seq.clock, in %clock_en : i1, in %reset0 : i1, in %in : i4, out out_reg0 : i4) {
+    %reset_values = hw.constant 14 : i4  // 14 = 0b1110
+    // CHECK: %{{.+}} = xlnx.fdre
+    // CHECK: %{{.+}} = xlnx.fdse
+    // CHECK: %{{.+}} = xlnx.fdse
+    // CHECK: %{{.+}} = xlnx.fdse
+    %reg0 = seq.compreg %in, %clock reset %reset0, %reset_values : i4
+    hw.output %reg0 : i4
+  }
 }
 

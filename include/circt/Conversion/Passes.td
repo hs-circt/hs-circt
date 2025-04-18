@@ -874,7 +874,8 @@ def ConvertCoreToXlnx : Pass<"convert-core-to-xlnx", "mlir::ModuleOp"> {
   let dependentDialects = [
     "hw::HWDialect",
     "seq::SeqDialect",
-    "xlnx::XlnxDialect"
+    "xlnx::XlnxDialect",
+    "comb::CombDialect"
   ];
 }
 
