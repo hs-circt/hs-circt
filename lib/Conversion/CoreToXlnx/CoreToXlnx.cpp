@@ -271,9 +271,8 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
       }
 
       if (resetType == ResetType::Unknown) {
-        op.emitError()
-            << "Reset type is unknown. Cannot determine if we should "
-               "use FDSE or FDRE.";
+        op.emitError() << "Reset type is unknown. Cannot determine if we "
+                          "should use FDSE or FDRE.";
         return failure();
       }
 
@@ -300,9 +299,8 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
             /*R=*/resetSignal, /*D=*/singleBitInputDataSignal);
         singleBitResult = fdreOp.getResult();
       } else {
-        op.emitError()
-            << "Reset type is unknown. Cannot determine if we should "
-               "use FDSE or FDRE.";
+        op.emitError() << "Reset type is unknown. Cannot determine if we "
+                          "should use FDSE or FDRE.";
         return failure();
       }
       multiBitCtx.addOutputDataSignal(singleBitResult);
@@ -327,9 +325,10 @@ struct CompRegLowering
   /// Helper function to find or create a constant in a module.
   /// Returns the constant value if found, or creates a new one at the beginning
   /// of the module body if not found.
-  static Value getOrCreateConstantInModule(Operation *op, hw::HWModuleOp hwModule,
-                                          Type type, IntegerAttr valueAttr,
-                                          ConversionPatternRewriter &rewriter) {
+  static Value
+  getOrCreateConstantInModule(Operation *op, hw::HWModuleOp hwModule, Type type,
+                              IntegerAttr valueAttr,
+                              ConversionPatternRewriter &rewriter) {
     if (!hwModule) {
       op->emitError("Operation must be inside an hw.module");
       // Cannot directly signal failure from this helper function.
@@ -373,17 +372,18 @@ struct CompRegLowering
     return rewriter.create<hw::ConstantOp>(hwModule.getLoc(), valueAttr);
   }
 
-  static Value
-  getClockEnable(CompRegOp op,
-                 CompRegRewriterHelper<CompRegLowering, CompRegOp>::OpAdaptor adaptor,
-                 ConversionPatternRewriter &rewriter) {
+  static Value getClockEnable(
+      CompRegOp op,
+      CompRegRewriterHelper<CompRegLowering, CompRegOp>::OpAdaptor adaptor,
+      ConversionPatternRewriter &rewriter) {
     // Find the parent HWModuleOp.
     auto hwModule = op->template getParentOfType<hw::HWModuleOp>();
     Type i1Type = rewriter.getI1Type();
     IntegerAttr trueAttr = rewriter.getIntegerAttr(i1Type, 1);
 
     // Use the extracted helper function to get or create a constant true value
-    return getOrCreateConstantInModule(op, hwModule, i1Type, trueAttr, rewriter);
+    return getOrCreateConstantInModule(op, hwModule, i1Type, trueAttr,
+                                       rewriter);
   }
 };
 
@@ -397,7 +397,8 @@ struct CompRegCELowering
 
   static Value getClockEnable(
       CompRegClockEnabledOp op,
-      CompRegRewriterHelper<CompRegCELowering, CompRegClockEnabledOp>::OpAdaptor adaptor,
+      CompRegRewriterHelper<CompRegCELowering, CompRegClockEnabledOp>::OpAdaptor
+          adaptor,
       ConversionPatternRewriter &rewriter) {
     return adaptor.getClockEnable();
   }
@@ -416,6 +417,9 @@ struct CoreToXlnxPass
 };
 } // namespace
 
+/// Configures the legality rules for the CoreToXlnx conversion.
+/// Marks seq.compreg and seq.compreg.ce as illegal, while marking necessary
+/// Xlnx, Builtin, HW, and Comb dialect ops/dialects as legal.
 static void populateLegality(ConversionTarget &target) {
   // Mark seq.compreg and seq.compreg.ce as illegal
   target.addIllegalOp<seq::CompRegOp, seq::CompRegClockEnabledOp>();
@@ -436,6 +440,8 @@ static void populateLegality(ConversionTarget &target) {
   target.addLegalOp<seq::InitialOp, seq::YieldOp>();
 }
 
+/// Populates the given pattern set with the operation conversion patterns
+/// required for the CoreToXlnx conversion (CompRegLowering, CompRegCELowering).
 static void populateOpConversion(RewritePatternSet &patterns) {
   patterns.add<CompRegLowering, CompRegCELowering>(patterns.getContext());
 }
