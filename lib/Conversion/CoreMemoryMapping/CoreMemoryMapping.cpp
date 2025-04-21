@@ -256,7 +256,7 @@ hw::HWModuleExternOp createModuleExtern(ModuleOp op, MLIRContext &context,
                                   builder.getIntegerType(32),
                                   hw::ModulePort::Direction::Output});
 
-  ports.emplace_back(hw::PortInfo{builder.getStringAttr("DOUTPBDINP"),
+  ports.emplace_back(hw::PortInfo{builder.getStringAttr("DOUTPBDOUTP"),
                                   builder.getIntegerType(4),
                                   hw::ModulePort::Direction::Output});
 
