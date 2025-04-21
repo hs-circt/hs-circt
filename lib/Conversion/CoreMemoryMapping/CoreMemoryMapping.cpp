@@ -50,42 +50,14 @@ llvm::SmallVector<seq::FirMemOp> analyseFirMem(ModuleOp module) {
   return firMemOps;
 }
 
-hw::HWGeneratorSchemaOp CreateBRAMSchema(ModuleOp module) {
-  auto builder = OpBuilder::atBlockBegin(module.getBody());
-  std::array<StringRef, 6> schemaFields = {
-      // // Basic control ports
-      "depth", "width", "INIT_A", "READ_WIDTH_A", "WRITE_WIDTH_A", "INIT_FILE",
-  };
-  auto schemaOp = builder.create<hw::HWGeneratorSchemaOp>(
-      module.getLoc(), "RAMB36E2", "BRAM",
-      builder.getStrArrayAttr(schemaFields));
-  return schemaOp;
-}
-
-hw::HWGeneratorSchemaOp CreateDRAMSchema(ModuleOp module, std::string name) {
-  auto builder = OpBuilder::atBlockBegin(module.getBody());
-  std::array<StringRef, 1> schemaFields = {
-      // // Basic control ports
-      "IS_WCLK_INVERTED",
-  };
-  auto schemaOp = builder.create<hw::HWGeneratorSchemaOp>(
-      module.getLoc(), name, "DRAM", builder.getStrArrayAttr(schemaFields));
-  return schemaOp;
-}
-
-hw::HWModuleGeneratedOp
-create32Dram6(ModuleOp module, Operation *op, MLIRContext &context,
-              int moduleNum,
-              llvm::StringMap<hw::HWGeneratorSchemaOp> &schemaMap) {
+hw::HWModuleExternOp create32Dram6(ModuleOp module, Operation *op,
+                                   MLIRContext &context) {
   OpBuilder builder(&context);
   builder.setInsertionPointToStart(module.getBody());
   SmallVector<hw::PortInfo> ports;
 
-  StringAttr moduleName =
-      builder.getStringAttr("RAM32M_" + std::to_string(moduleNum));
-  if (schemaMap.find("RAM32M") == schemaMap.end()) {
-    schemaMap["RAM32M"] = CreateDRAMSchema(module, "RAM32M");
-  }
+  StringAttr moduleName = builder.getStringAttr("RAM32M");
+
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("DIA"),
                                   builder.getIntegerType(2),
                                   hw::ModulePort::Direction::Input});
@@ -128,34 +100,20 @@ create32Dram6(ModuleOp module, Operation *op, MLIRContext &context,
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("DOD"),
                                   builder.getIntegerType(2),
                                   hw::ModulePort::Direction::Output});
-  NamedAttribute genAttrs[] = {
-      builder.getNamedAttr("INIT_A", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("INIT_B", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("INIT_C", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("INIT_D", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr(
-          "IS_WCLK_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-  };
-  auto externmodule = builder.create<hw::HWModuleGeneratedOp>(
-      op->getLoc(), FlatSymbolRefAttr::get(schemaMap["RAM32M"]), moduleName,
-      ports, StringRef{}, ArrayAttr{}, genAttrs);
+
+  auto externmodule =
+      builder.create<hw::HWModuleExternOp>(op->getLoc(), moduleName, ports);
   return externmodule;
 }
 
-hw::HWModuleGeneratedOp
-create64Dram3(ModuleOp module, Operation *op, MLIRContext &context,
-              int moduleNum,
-              llvm::StringMap<hw::HWGeneratorSchemaOp> &schemaMap) {
+hw::HWModuleExternOp create64Dram3(ModuleOp module, Operation *op,
+                                   MLIRContext &context) {
   OpBuilder builder(&context);
   builder.setInsertionPointToStart(module.getBody());
   SmallVector<hw::PortInfo> ports;
 
-  StringAttr moduleName =
-      builder.getStringAttr("RAM64M_" + std::to_string(moduleNum));
-  if (schemaMap.find("RAM64M") == schemaMap.end()) {
-    schemaMap["RAM64M"] = CreateDRAMSchema(module, "RAM64M");
-  }
+  StringAttr moduleName = builder.getStringAttr("RAM64M");
+
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("DIA"),
                                   builder.getIntegerType(1),
                                   hw::ModulePort::Direction::Input});
@@ -198,35 +156,20 @@ create64Dram3(ModuleOp module, Operation *op, MLIRContext &context,
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("DOD"),
                                   builder.getIntegerType(1),
                                   hw::ModulePort::Direction::Output});
-  NamedAttribute genAttrs[] = {
-      builder.getNamedAttr("INIT_A", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("INIT_B", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("INIT_C", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("INIT_D", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr(
-          "IS_WCLK_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-  };
-  auto externmodule = builder.create<hw::HWModuleGeneratedOp>(
-      op->getLoc(), FlatSymbolRefAttr::get(schemaMap["RAM64M"]), moduleName,
-      ports, StringRef{}, ArrayAttr{}, genAttrs);
+
+  auto externmodule =
+      builder.create<hw::HWModuleExternOp>(op->getLoc(), moduleName, ports);
+
   return externmodule;
 }
 
-hw::HWModuleGeneratedOp
-create32Dram(ModuleOp module, Operation *op, MLIRContext &context,
-             int moduleNum, int width,
-             llvm::StringMap<hw::HWGeneratorSchemaOp> &schemaMap) {
+hw::HWModuleExternOp create32Dram(ModuleOp module, Operation *op,
+                                  MLIRContext &context, int width) {
   OpBuilder builder(&context);
   builder.setInsertionPointToStart(module.getBody());
   SmallVector<hw::PortInfo> ports;
-  StringAttr moduleName = builder.getStringAttr(
-      "RAM" + std::to_string(width) + "X1D_" + std::to_string(moduleNum));
-  if (schemaMap.find("RAM" + std::to_string(width) + "X1D") ==
-      schemaMap.end()) {
-    schemaMap["RAM" + std::to_string(width) + "X1D"] =
-        CreateDRAMSchema(module, "RAM" + std::to_string(width) + "X1D");
-  }
+  StringAttr moduleName = builder.getStringAttr("RAM" + std::to_string(width) + "X1D");
+
   int logwidth = std::log2(width);
 
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("WCLK"),
@@ -250,34 +193,19 @@ create32Dram(ModuleOp module, Operation *op, MLIRContext &context,
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("SPO"),
                                   builder.getIntegerType(1),
                                   hw::ModulePort::Direction::Output});
-  NamedAttribute genAttrs[] = {
-      builder.getNamedAttr("INIT", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr(
-          "IS_WCLK_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-  };
-  auto externmodule = builder.create<hw::HWModuleGeneratedOp>(
-      op->getLoc(),
-      FlatSymbolRefAttr::get(schemaMap["RAM" + std::to_string(width) + "X1D"]),
-      moduleName, ports, StringRef{}, ArrayAttr{}, genAttrs);
+
+  auto externmodule =
+      builder.create<hw::HWModuleExternOp>(op->getLoc(), moduleName, ports);
 
   return externmodule;
 }
 
-hw::HWModuleGeneratedOp
-createDram3(ModuleOp module, Operation *op, MLIRContext &context, int moduleNum,
-            llvm::StringMap<hw::HWGeneratorSchemaOp> &schemaMap) {
-  return create64Dram3(module, op, context, moduleNum, schemaMap);
-}
 
-hw::HWModuleGeneratedOp
-createModuleExtern(ModuleOp op, MLIRContext &context, Type ADDRAtype,
-                   Type DIADItype, Type DOADOtype, Type MASKtype, int moduleNum,
-                   hw::HWGeneratorSchemaOp schemaOp, int width) {
+hw::HWModuleExternOp createModuleExtern(ModuleOp op, MLIRContext &context,
+                                        int moduleNum, int width) {
   OpBuilder builder(&context);
   builder.setInsertionPointToStart(op.getBody());
-  StringAttr moduleName =
-      builder.getStringAttr("RAMB36E2_" + std::to_string(moduleNum));
+  StringAttr moduleName = builder.getStringAttr("RAMB36E2");
   SmallVector<hw::PortInfo> ports;
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("CLKARDCLK"),
                                   seq::ClockType::get(&context),
@@ -285,7 +213,8 @@ createModuleExtern(ModuleOp op, MLIRContext &context, Type ADDRAtype,
 
   // Port A configuration
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("ADDRARDADDR"),
-                                  ADDRAtype, hw::ModulePort::Direction::Input});
+                                  builder.getIntegerType(15),
+                                  hw::ModulePort::Direction::Input});
 
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("ENARDEN"),
                                   builder.getIntegerType(1),
@@ -308,7 +237,8 @@ createModuleExtern(ModuleOp op, MLIRContext &context, Type ADDRAtype,
                                   hw::ModulePort::Direction::Output});
   // Port B configuration
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("ADDRBWRADDR"),
-                                  ADDRAtype, hw::ModulePort::Direction::Input});
+                                  builder.getIntegerType(15),
+                                  hw::ModulePort::Direction::Input});
 
   ports.emplace_back(hw::PortInfo{builder.getStringAttr("ENBWREN"),
                                   builder.getIntegerType(1),
@@ -350,73 +280,8 @@ createModuleExtern(ModuleOp op, MLIRContext &context, Type ADDRAtype,
                                   builder.getIntegerType(8),
                                   hw::ModulePort::Direction::Input});
 
-  NamedAttribute genAttrs[] = {
-      builder.getNamedAttr("depth", builder.getIntegerAttr(ADDRAtype, 32)),
-      builder.getNamedAttr("width", builder.getIntegerAttr(DIADItype, width)),
-      builder.getNamedAttr("CASCADE_ORDER_A", builder.getStringAttr("NONE")),
-      builder.getNamedAttr("CASCADE_ORDER_B", builder.getStringAttr("NONE")),
-      builder.getNamedAttr("CLOCK_DOMAINS",
-                           builder.getStringAttr("INDEPENDENT")),
-      builder.getNamedAttr("SIM_COLLISION_CHECK", builder.getStringAttr("ALL")),
-      builder.getNamedAttr(
-          "DOA_REG", builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "DOB_REG", builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "ENADDRENA", builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "ENADDRENB", builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr("EN_ECC_PIPE", builder.getStringAttr("FALSE")),
-      builder.getNamedAttr("EN_ECC_READ", builder.getStringAttr("FALSE")),
-      builder.getNamedAttr("EN_ECC_WRITE", builder.getStringAttr("FALSE")),
-      builder.getNamedAttr("INIT_A", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("INIT_B", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("INIT_FILE", builder.getStringAttr("NONE")),
-      builder.getNamedAttr(
-          "IS_CLKARDCLK_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "IS_CLKBWRCLK_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "IS_ENARDEN_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "IS_ENBWREN_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "IS_RSTRAMARSTRAM_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "IS_RSTREGARSTREG_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "IS_RSTREGB_INVERTED",
-          builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr("RDADDRCHANGEA", builder.getStringAttr("FALSE")),
-      builder.getNamedAttr("RDADDRCHANGEB", builder.getStringAttr("FALSE")),
-      builder.getNamedAttr(
-          "READ_WIDTH_A", builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr(
-          "READ_WIDTH_B", builder.getIntegerAttr(builder.getIntegerType(1), 0)),
-      builder.getNamedAttr("WRITE_WIDTH_A", builder.getIntegerAttr(
-                                                builder.getIntegerType(1), 0)),
-      builder.getNamedAttr("WRITE_WIDTH_B", builder.getIntegerAttr(
-                                                builder.getIntegerType(1), 0)),
-      builder.getNamedAttr("RSTREG_PRIORITY_A",
-                           builder.getStringAttr("RSTREG")),
-      builder.getNamedAttr("RSTREG_PRIORITY_B",
-                           builder.getStringAttr("RSTREG")),
-      builder.getNamedAttr("SRVAL_A", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("SRVAL_B", builder.getI32IntegerAttr(0)),
-      builder.getNamedAttr("SLEEP_ASYNC", builder.getStringAttr("FALSE")),
-      builder.getNamedAttr("WRITE_MODE_A", builder.getStringAttr("NO_CHANGE")),
-      builder.getNamedAttr("WRITE_MODE_B", builder.getStringAttr("NO_CHANGE")),
-  };
-
-  auto externmodule = builder.create<hw::HWModuleGeneratedOp>(
-      op->getLoc(), FlatSymbolRefAttr::get(schemaOp), moduleName, ports,
-      StringRef{}, ArrayAttr{}, genAttrs);
+  auto externmodule =
+      builder.create<hw::HWModuleExternOp>(op->getLoc(), moduleName, ports);
   return externmodule;
 }
 
@@ -424,14 +289,12 @@ hw::InstanceOp
 createInsetance(ModuleOp module, seq::FirMemOp op, seq::FirMemReadOp readop,
                 MLIRContext &context, int &moduleNum,
                 llvm::SmallVector<Value> &symbolInputs,
-                llvm::DenseMap<int, hw::HWModuleGeneratedOp> &dramMap,
-                int bitSize, int logDepth, OpBuilder &builder,
-                llvm::StringMap<hw::HWGeneratorSchemaOp> &schemaMap) {
+                llvm::DenseMap<int, hw::HWModuleExternOp> &dramMap, int bitSize,
+                int logDepth, OpBuilder &builder) {
   symbolInputs.emplace_back(readop.getAddress());
   auto externop = dramMap[logDepth];
   if (externop == nullptr) {
-    externop =
-        create32Dram(module, op, context, moduleNum, 1 << logDepth, schemaMap);
+    externop = create32Dram(module, op, context, 1 << logDepth);
     externop.setVerilogName(
         builder.getStringAttr("RAM" + std::to_string(1 << logDepth) + "X1D"));
     dramMap[logDepth] = externop;
@@ -466,12 +329,11 @@ createInsetance(ModuleOp module, seq::FirMemOp op, seq::FirMemReadOp readop,
 
 void useX1D(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
             int &moduleNum, llvm::SmallVector<Value> &symbolInputs,
-            llvm::DenseMap<int, hw::HWModuleGeneratedOp> &dramMap,
+            llvm::DenseMap<int, hw::HWModuleExternOp> &dramMap,
             OpBuilder &builder, int bitSize, int i, int depth,
             seq::FirMemReadOp readop, seq::FirMemWriteOp writeop,
             llvm::SmallVector<hw::InstanceOp> &dramInstances,
-            llvm::SmallVector<Value> &dramResult,
-            llvm::StringMap<hw::HWGeneratorSchemaOp> &schemaMap) {
+            llvm::SmallVector<Value> &dramResult) {
   auto extractop =
       builder.create<comb::ExtractOp>(op->getLoc(), writeop.getData(), i, 1);
   symbolInputs.emplace_back(writeop.getClk());
@@ -481,7 +343,7 @@ void useX1D(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
 
   hw::InstanceOp instanceModule =
       createInsetance(module, op, readop, context, moduleNum, symbolInputs,
-                      dramMap, bitSize, log2(depth), builder, schemaMap);
+                      dramMap, bitSize, log2(depth), builder);
   instanceModule->setAttr(
       "INIT", builder.getIntegerAttr(builder.getIntegerType(log2(depth)), 0));
   instanceModule->setAttr("IS_WCLK_INVERTED",
@@ -492,13 +354,12 @@ void useX1D(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
 
 void use6bitRAM(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
                 int &moduleNum, llvm::SmallVector<Value> &symbolInputs,
-                llvm::DenseMap<int, hw::HWModuleGeneratedOp> &dramMap,
+                llvm::DenseMap<int, hw::HWModuleExternOp> &dramMap,
                 OpBuilder &builder, int bitSize, int i, int depth,
                 seq::FirMemReadOp readop, seq::FirMemWriteOp writeop,
                 llvm::SmallVector<hw::InstanceOp> &dramInstances,
                 llvm::SmallVector<Value> &dramResult,
-                seq::FirMemReadOp secReadop,
-                llvm::StringMap<hw::HWGeneratorSchemaOp> &schemaMap) {
+                seq::FirMemReadOp secReadop) {
   auto extractopA =
       builder.create<comb::ExtractOp>(op->getLoc(), writeop.getData(), i, 2);
   auto extractopB = builder.create<comb::ExtractOp>(
@@ -544,7 +405,7 @@ void use6bitRAM(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
   symbolInputs.emplace_back(writeop.getClk());    // clka
   auto externop = dramMap[logDepth * 10]; // avoid 6bitRAM and 1bit mixed
   if (externop == nullptr) {
-    externop = create32Dram6(module, op, context, moduleNum, schemaMap);
+    externop = create32Dram6(module, op, context);
     dramMap[logDepth * 10] = externop;
   }
   auto instanceModule = builder.create<hw::InstanceOp>(
@@ -569,13 +430,12 @@ void use6bitRAM(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
 
 void use3BitRAM(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
                 int &moduleNum, llvm::SmallVector<Value> &symbolInputs,
-                llvm::DenseMap<int, hw::HWModuleGeneratedOp> &dramMap,
+                llvm::DenseMap<int, hw::HWModuleExternOp> &dramMap,
                 OpBuilder &builder, int bitSize, int i, int depth,
                 seq::FirMemReadOp readop, seq::FirMemWriteOp writeop,
                 llvm::SmallVector<hw::InstanceOp> &dramInstances,
                 llvm::SmallVector<Value> &dramResult,
-                seq::FirMemReadOp secReadop,
-                llvm::StringMap<hw::HWGeneratorSchemaOp> &schemaMap) {
+                seq::FirMemReadOp secReadop) {
   auto extractopA =
       builder.create<comb::ExtractOp>(op->getLoc(), writeop.getData(), i, 1);
   auto extractopB = builder.create<comb::ExtractOp>(
@@ -623,7 +483,7 @@ void use3BitRAM(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
   symbolInputs.emplace_back(writeop.getClk());    // clka
   auto externop = dramMap[logDepth * 10]; // avoid 6bitRAM and 1bit mixed
   if (externop == nullptr) {
-    externop = createDram3(module, op, context, moduleNum++, schemaMap);
+    externop = create64Dram3(module, op, context);
     dramMap[logDepth * 10] = externop;
   }
   auto instanceModule = builder.create<hw::InstanceOp>(
@@ -648,8 +508,7 @@ void use3BitRAM(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
 
 void setDistRam(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
                 int &moduleNum,
-                llvm::DenseMap<int, hw::HWModuleGeneratedOp> &dramMap,
-                llvm::StringMap<hw::HWGeneratorSchemaOp> &schemaMap) {
+                llvm::DenseMap<int, hw::HWModuleExternOp> &dramMap) {
   OpBuilder builder(&context);
   int bitSize = op.getType().getWidth();
   int depth = op.getType().getDepth();
@@ -690,17 +549,16 @@ void setDistRam(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
     llvm::SmallVector<Value> symbolInputs;
     if ((bitSize <= 12 || bitSize - i < 6) || depth > 64) {
       useX1D(module, op, context, moduleNum, symbolInputs, dramMap, builder,
-             bitSize, i, depth, readop, writeop, dramInstances, dramResult,
-             schemaMap);
+             bitSize, i, depth, readop, writeop, dramInstances, dramResult);
     } else if (depth <= 32) {
       use6bitRAM(module, op, context, moduleNum, symbolInputs, dramMap, builder,
                  bitSize, i, depth, readop, writeop, dramInstances, dramResult,
-                 secReadop, schemaMap);
+                 secReadop);
       i += 5;
     } else if (depth <= 64) {
       use3BitRAM(module, op, context, moduleNum, symbolInputs, dramMap, builder,
                  bitSize, i, depth, readop, writeop, dramInstances, dramResult,
-                 secReadop, schemaMap);
+                 secReadop);
       i += 2;
     }
   }
@@ -715,11 +573,10 @@ void setDistRam(ModuleOp module, seq::FirMemOp op, MLIRContext &context,
 std::pair<hw::InstanceOp, seq::FirMemReadWriteOp>
 setBram(ModuleOp module, seq::FirMemOp op, MLIRContext &context, int &moduleNum,
         OpBuilder &builder,
-        llvm::StringMap<hw::HWModuleGeneratedOp> &moduleGeneratedMap,
-        hw::HWGeneratorSchemaOp schemaOp, int portsize, int ExtractSize) {
+        llvm::StringMap<hw::HWModuleExternOp> &moduleGeneratedMap, int portsize,
+        int ExtractSize) {
   auto bitSize = op.getType().getWidth();
   llvm::SmallVector<Value> symbolInputs;
-  llvm::SmallVector<Type> symbolInputsType;
   hw::InstanceOp instanceop = nullptr;
   if (auto readWriteOp = llvm::dyn_cast<seq::FirMemReadWriteOp>(
           op->getUses().begin()->getOwner())) {
@@ -730,9 +587,23 @@ setBram(ModuleOp module, seq::FirMemOp op, MLIRContext &context, int &moduleNum,
         readWriteOp.getMask() == nullptr) {
     }
 
-    symbolInputs.emplace_back(readWriteOp.getClk());     // clka
-    symbolInputs.emplace_back(readWriteOp.getAddress()); // addra
-    symbolInputs.emplace_back(readWriteOp.getEnable());  // ena
+    symbolInputs.emplace_back(readWriteOp.getClk()); // clka
+
+    mlir::Value addra = readWriteOp.getAddress();
+    if (addra.getType().getIntOrFloatBitWidth() < 15) {
+      auto constantop = builder.createOrFold<hw::ConstantOp>(
+          op->getLoc(),
+          builder.getIntegerType(15 - addra.getType().getIntOrFloatBitWidth()),
+          builder.getIntegerAttr(
+              builder.getIntegerType(15 -
+                                     addra.getType().getIntOrFloatBitWidth()),
+              0));
+      auto concatop =
+          builder.create<comb::ConcatOp>(op->getLoc(), constantop, addra);
+      addra = concatop.getResult();
+    }
+    symbolInputs.emplace_back(addra);                   // addra
+    symbolInputs.emplace_back(readWriteOp.getEnable()); // ena
 
     mlir::Value writeData = readWriteOp.getWriteData();
     mlir::Value extractValue = writeData;
@@ -791,13 +662,8 @@ setBram(ModuleOp module, seq::FirMemOp op, MLIRContext &context, int &moduleNum,
       dipadi = nullop1;
     symbolInputs.emplace_back(dipadi); // dinpadi
     auto nullop = builder.createOrFold<hw::ConstantOp>(
-        op->getLoc(),
-        builder.getIntegerType(
-            readWriteOp.getAddress().getType().getIntOrFloatBitWidth()),
-        builder.getIntegerAttr(
-            builder.getIntegerType(
-                readWriteOp.getAddress().getType().getIntOrFloatBitWidth()),
-            0));
+        op->getLoc(), builder.getIntegerType(15),
+        builder.getIntegerAttr(builder.getIntegerType(15), 0));
     auto nullop2 = builder.createOrFold<hw::ConstantOp>(
         op->getLoc(), builder.getIntegerType(32),
         builder.getIntegerAttr(builder.getIntegerType(32), 0));
@@ -840,24 +706,13 @@ setBram(ModuleOp module, seq::FirMemOp op, MLIRContext &context, int &moduleNum,
       }
     }
     symbolInputs.emplace_back(mask); // WEBWE
-    symbolInputsType.emplace_back(readWriteOp.getAddress().getType());
-    symbolInputsType.emplace_back(builder.getIntegerType(portsize));
-    symbolInputsType.emplace_back(builder.getIntegerType(portsize));
-    symbolInputsType.emplace_back(weaValue.getType());
-    std::string key =
-        "RAMB36E2_" +
-        std::to_string(symbolInputsType[0].getIntOrFloatBitWidth()) + "_" +
-        std::to_string(symbolInputsType[1].getIntOrFloatBitWidth()) + "_" +
-        std::to_string(symbolInputsType[2].getIntOrFloatBitWidth()) + "_" +
-        std::to_string(symbolInputsType[3].getIntOrFloatBitWidth());
+
+    std::string key = "RAMB36E2";
 
     auto it = moduleGeneratedMap.find(key);
     if (it == moduleGeneratedMap.end()) {
-      auto newModule = createModuleExtern(
-          module, context, symbolInputsType[0],
-          builder.getIntegerType(portsize < 64 ? portsize : portsize / 2),
-          builder.getIntegerType(portsize < 64 ? portsize : portsize / 2),
-          symbolInputsType[3], moduleNum++, schemaOp, portsize);
+      auto newModule =
+          createModuleExtern(module, context, moduleNum++, portsize);
       moduleGeneratedMap.insert({key, newModule});
       it = moduleGeneratedMap.find(key);
     }
@@ -880,10 +735,8 @@ void CoreMemoryMappingPass::runOnOperation() {
   llvm::SmallVector<seq::FirMemOp> firMemOps = analyseFirMem(module);
   OpBuilder builder(&context);
   int moduleNum = 0;
-  llvm::StringMap<hw::HWModuleGeneratedOp> moduleGeneratedMap;
-  llvm::DenseMap<int, hw::HWModuleGeneratedOp> dramMap;
-  llvm::StringMap<hw::HWGeneratorSchemaOp> schemaMap;
-  auto schemaOp = CreateBRAMSchema(module);
+  llvm::StringMap<hw::HWModuleExternOp> moduleGeneratedMap;
+  llvm::DenseMap<int, hw::HWModuleExternOp> dramMap;
   for (auto op : firMemOps) {
     builder.setInsertionPoint(op);
     int bitSize = op.getType().getWidth();
@@ -907,7 +760,7 @@ void CoreMemoryMappingPass::runOnOperation() {
           seq::FirMemReadWriteOp readWriteOp;
           std::tie(instanceop, readWriteOp) =
               setBram(module, op, context, moduleNum, builder,
-                      moduleGeneratedMap, schemaOp, maxBitsize, i * maxBitsize);
+                      moduleGeneratedMap, maxBitsize, i * maxBitsize);
           if (instUses.empty()) {
             for (auto &uses : readWriteOp->getUses()) {
               instUses.emplace_back(uses.getOwner(), uses.getOperandNumber());
@@ -948,7 +801,7 @@ void CoreMemoryMappingPass::runOnOperation() {
           hasdoutpadout = true;
         std::pair<hw::InstanceOp, seq::FirMemReadWriteOp> instanceOp;
         instanceOp = setBram(module, op, context, moduleNum, builder,
-                             moduleGeneratedMap, schemaOp, portsize, -1);
+                             moduleGeneratedMap, portsize, -1);
         auto instV = instanceOp.first.getResult(0);
         if (bitSize < 32) {
           if (hasdoutpadout) {
@@ -987,7 +840,7 @@ void CoreMemoryMappingPass::runOnOperation() {
       }
       op->erase();
     } else {
-      setDistRam(module, op, context, moduleNum, dramMap, schemaMap);
+      setDistRam(module, op, context, moduleNum, dramMap);
     }
   }
 }
