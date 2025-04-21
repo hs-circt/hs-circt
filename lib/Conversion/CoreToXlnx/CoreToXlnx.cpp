@@ -51,32 +51,29 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
   // Only if hasReset is true, we need to determine if we should use FDSE or
   // FDRE If hasReset is false, we can directly use FDRE with a constant 0
   // reset signal and skip the FDSE/FDRE determination
-  ResetType getResetType(Op op, Value resetValue) const {
-    // Check if reset value is a constant
-    if (auto constOp = resetValue.getDefiningOp<hw::ConstantOp>()) {
-      IntegerAttr attr = constOp.getValueAttr();
-      // Check if the constant is i1 type.
-      if (!attr || !attr.getType().isInteger(1)) {
-        op.emitError() << "Reset value constant is not an i1 type:";
-        constOp->dump();
-        return ResetType::Unknown;
-      }
-      // Use FDSE if reset value exists and is constant 1
-      if (attr.getValue().isOne()) {
-        return ResetType::SyncSet;
-      } else if (attr.getValue().isZero()) {
-        return ResetType::SyncReset;
-      } else {
-        // Should not happen for i1
-        op.emitError() << "Invalid i1 constant value for reset:";
-        constOp->dump();
-        return ResetType::Unknown;
-      }
+  ResetType getResetType(Op op, const APInt &resetBitValue) const {
+    // Check if the constant is i1 type.
+    if (resetBitValue.getBitWidth() != 1) {
+      op.emitError() << "Reset value bit is not an i1 type, but is "
+                     << resetBitValue.getBitWidth() << " bits wide.";
+      // Dump the APInt value for debugging if needed
+      llvm::errs() << "Invalid APInt for reset: ";
+      resetBitValue.print(llvm::errs(), /*isSigned=*/false);
+      llvm::errs() << "\n";
+      return ResetType::Unknown;
+    }
+    // Use FDSE if reset value exists and is constant 1
+    if (resetBitValue.isOne()) {
+      return ResetType::SyncSet;
+    } else if (resetBitValue.isZero()) {
+      return ResetType::SyncReset;
     } else {
-      // Reset value is not a constant, emit an error
-      op->emitError() << "Reset value is not a constant. Cannot determine "
-                         "whether to use FDSE or FDRE:";
-      resetValue.dump(); // Dump the Value
+      // Should not happen for i1
+      op.emitError() << "Invalid i1 value for reset bit.";
+      // Dump the APInt value for debugging if needed
+      llvm::errs() << "Invalid APInt for reset: ";
+      resetBitValue.print(llvm::errs(), /*isSigned=*/false);
+      llvm::errs() << "\n";
       return ResetType::Unknown;
     }
   }
@@ -113,46 +110,63 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
       }
     }
 
-    Value get1BitResetValue() const {
+    std::optional<APInt> get1BitResetValue() const {
       Location loc = op->getLoc();
       if (numBits == 1) {
-        // If the original resetValue is already 1-bit, return it directly.
-        // Ensure it's actually i1 if hasReset is true.
-        if (resetValue && !resetValue.getType().isInteger(1)) {
-          op->emitError() << "Single-bit reset value is not i1 type.";
-          return nullptr;
+        // Handle single-bit reset value
+        if (!resetValue) {
+          // This case should technically be handled by the logic
+          // synthesizing a zero reset if hasReset is false initially.
+          // If we reach here with hasReset=true and !resetValue, it's an error.
+          op->emitError() << "Missing reset value for single-bit register "
+                             "when reset is expected.";
+          return std::nullopt;
         }
-        return resetValue;
+        if (!resetValue.getType().isInteger(1)) {
+          op->emitError() << "Single-bit reset value is not i1 type.";
+          return std::nullopt;
+        }
+        // If it's a constant, extract the APInt
+        if (auto constantOp = resetValue.getDefiningOp<hw::ConstantOp>()) {
+          if (auto attr = constantOp.getValueAttr()) {
+            return attr.getValue();
+          } else {
+            op->emitError() << "Single-bit constant reset value is missing "
+                               "IntegerAttr.";
+            return std::nullopt;
+          }
+        } else {
+          // If the single-bit reset is not a constant, we cannot determine
+          // FDSE/FDRE at compile time based on its value. This logic
+          // currently requires a constant reset value.
+          op->emitError() << "Single-bit reset value must be a compile-time "
+                             "constant to determine FDSE/FDRE.";
+          resetValue.dump(); // Dump the Value
+          return std::nullopt;
+        }
       }
 
-      // Get the defining ConstantOp for the multi-bit reset value.
+      // Handle multi-bit reset value (must be constant)
       auto *definingOp = resetValue.getDefiningOp();
       auto constantOp = dyn_cast_or_null<hw::ConstantOp>(definingOp);
 
       if (!constantOp) {
-        // This should ideally be checked before entering the loop or
-        // construction. If resetValue is not a constant, we cannot extract
-        // bits.
         op->emitError()
             << "Multi-bit reset value must be a compile-time constant.";
-        return nullptr; // Indicate failure
+        return std::nullopt;
       }
 
       IntegerAttr attr = constantOp.getValueAttr();
       if (!attr) {
         op->emitError() << "Constant reset value is missing IntegerAttr.";
-        return nullptr;
+        return std::nullopt;
       }
 
       const APInt &multiBitValue = attr.getValue();
       // Extract the bit at selectedIndex.
       APInt singleBitValue = multiBitValue.lshr(selectedIndex).trunc(1);
 
-      // Create a new hw.ConstantOp for this single bit value.
-      // Insert the new constant right before the current operation 'op'.
-      OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPoint(op);
-      return rewriter.create<hw::ConstantOp>(loc, singleBitValue);
+      return singleBitValue; // Return the extracted APInt bit
     }
 
     void addOutputDataSignal(Value outputDataSignal) {
@@ -237,19 +251,19 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
 
     do {
       Value singleBitInputDataSignal = multiBitCtx.get1BitInputDataSignal();
-      Value singleBitResetValue =
-          multiBitCtx.get1BitResetValue(); // Returns Value
-      if (!singleBitResetValue && hasReset) {
-        op->emitError() << "Failed to extract single bit reset value.";
-        return failure();
-      }
 
       // Determine if we should use FDSE (set) or FDRE (reset) based on reset
       // value
       ResetType resetType = ResetType::Unknown;
       if (hasReset) {
-        // Pass the single-bit *Value* to getResetType
-        resetType = getResetType(op, singleBitResetValue);
+        std::optional<APInt> singleBitResetValueOpt =
+            multiBitCtx.get1BitResetValue();
+        if (!singleBitResetValueOpt) {
+          op->emitError() << "Failed to determine single bit reset value.";
+          return failure();
+        }
+        // Pass the single-bit APInt to getResetType
+        resetType = getResetType(op, *singleBitResetValueOpt);
       } else {
         // If no reset was originally provided, we synthesized a 0 reset, so use
         // SyncReset
@@ -310,37 +324,35 @@ struct CompRegLowering
   using CompRegRewriterHelper<CompRegLowering,
                               CompRegOp>::CompRegRewriterHelper;
 
-  static Value
-  getClockEnable(CompRegOp op,
-                 CompRegRewriterHelper<CompRegLowering, CompRegOp>::OpAdaptor adaptor,
-                 ConversionPatternRewriter &rewriter) {
-    // Find the parent HWModuleOp.
-    auto hwModule = op->template getParentOfType<hw::HWModuleOp>();
-    Type i1Type = rewriter.getI1Type();
-    IntegerAttr trueAttr = rewriter.getIntegerAttr(i1Type, 1);
-
+  /// Helper function to find or create a constant in a module.
+  /// Returns the constant value if found, or creates a new one at the beginning
+  /// of the module body if not found.
+  static Value getOrCreateConstantInModule(Operation *op, hw::HWModuleOp hwModule,
+                                          Type type, IntegerAttr valueAttr,
+                                          ConversionPatternRewriter &rewriter) {
     if (!hwModule) {
-      op.emitError("CompRegOp must be inside an hw.module");
+      op->emitError("Operation must be inside an hw.module");
       // Cannot directly signal failure from this helper function.
       // Fallback to creating a local constant, though this likely indicates
       // an unexpected IR structure upstream.
-      return rewriter.template create<hw::ConstantOp>(op.getLoc(), trueAttr);
+      return rewriter.create<hw::ConstantOp>(op->getLoc(), valueAttr);
     }
 
     Block *moduleBody = hwModule.getBodyBlock();
     if (!moduleBody) {
       // Should not happen for a valid HWModuleOp with a body.
-      op.emitError("Parent hw.module has no body block");
+      op->emitError("Parent hw.module has no body block");
       // Fallback similar to the !hwModule case.
-      return rewriter.template create<hw::ConstantOp>(op.getLoc(), trueAttr);
+      return rewriter.create<hw::ConstantOp>(op->getLoc(), valueAttr);
     }
 
-    // Search the HW module's top-level operations for an existing `hw.constant
-    // true : i1`.
+    // Search the HW module's top-level operations for an existing constant
+    // with the specified type and value.
     Value existingConstantValue;
     for (Operation &topOp : moduleBody->getOperations()) {
       if (auto constantOp = dyn_cast<hw::ConstantOp>(topOp)) {
-        if (constantOp.getType() == i1Type && constantOp.getValue().isOne()) {
+        if (constantOp.getType() == type &&
+            constantOp.getValueAttr() == valueAttr) {
           existingConstantValue = constantOp.getResult();
           break; // Found the constant, no need to search further.
         }
@@ -358,8 +370,20 @@ struct CompRegLowering
         rewriter); // Saves/restores insertion point.
     rewriter.setInsertionPointToStart(moduleBody);
     // Use the HW module's location for the new constant operation.
-    return rewriter.template create<hw::ConstantOp>(hwModule.getLoc(),
-                                                    trueAttr);
+    return rewriter.create<hw::ConstantOp>(hwModule.getLoc(), valueAttr);
+  }
+
+  static Value
+  getClockEnable(CompRegOp op,
+                 CompRegRewriterHelper<CompRegLowering, CompRegOp>::OpAdaptor adaptor,
+                 ConversionPatternRewriter &rewriter) {
+    // Find the parent HWModuleOp.
+    auto hwModule = op->template getParentOfType<hw::HWModuleOp>();
+    Type i1Type = rewriter.getI1Type();
+    IntegerAttr trueAttr = rewriter.getIntegerAttr(i1Type, 1);
+
+    // Use the extracted helper function to get or create a constant true value
+    return getOrCreateConstantInModule(op, hwModule, i1Type, trueAttr, rewriter);
   }
 };
 

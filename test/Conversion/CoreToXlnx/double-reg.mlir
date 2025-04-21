@@ -19,10 +19,14 @@ module {
   // CHECK-LABEL: hw.module @WideDoubleReg
   hw.module @WideDoubleReg(in %clock : !seq.clock, in %clock_en : i1, in %reset0 : i1, in %in : i4, out out_reg0 : i4) {
     %reset_values = hw.constant 14 : i4  // 14 = 0b1110
-    // CHECK: %{{.+}} = xlnx.fdre
-    // CHECK: %{{.+}} = xlnx.fdse
-    // CHECK: %{{.+}} = xlnx.fdse
-    // CHECK: %{{.+}} = xlnx.fdse
+    // CHECK: comb.extract %in from 0 : (i4) -> i1
+    // CHECK-NEXT: %{{.+}} = xlnx.fdre(C : %clock, CE : %true, R : %reset0, D : %0) : !seq.clock, i1, i1, i1 -> i1
+    // CHECK-NEXT: comb.extract %in from 1 : (i4) -> i1
+    // CHECK-NEXT: %{{.+}} = xlnx.fdse(C : %clock, CE : %true, S : %reset0, D : %2) : !seq.clock, i1, i1, i1 -> i1
+    // CHECK-NEXT: comb.extract %in from 2 : (i4) -> i1
+    // CHECK-NEXT: %{{.+}} = xlnx.fdse(C : %clock, CE : %true, S : %reset0, D : %4) : !seq.clock, i1, i1, i1 -> i1
+    // CHECK-NEXT: comb.extract %in from 3 : (i4) -> i1
+    // CHECK-NEXT: %{{.+}} = xlnx.fdse(C : %clock, CE : %true, S : %reset0, D : %6) : !seq.clock, i1, i1, i1 -> i1
     %reg0 = seq.compreg %in, %clock reset %reset0, %reset_values : i4
     hw.output %reg0 : i4
   }
