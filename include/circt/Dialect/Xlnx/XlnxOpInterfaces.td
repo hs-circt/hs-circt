@@ -29,22 +29,4 @@ def ClockEnabled : OpInterface<"ClockEnabled"> {
   ];
 }
 
-def AsynchronousControl : OpInterface<"AsynchronousControl"> {
-  let cppNamespace = "circt::xlnx";
-  let description = "Trait for Asynchronous elements";
-
-  let methods = [
-    InterfaceMethod<"Get the asynchronous signal", "bool", "isAsynchronous">
-  ];
-}
-
-def SynchronousControl : OpInterface<"SynchronousControl"> {
-  let cppNamespace = "circt::xlnx";
-  let description = "Trait for Synchronous elements";
-
-  let methods = [
-    InterfaceMethod<"Get the synchronous signal", "bool", "isSynchronous">
-  ];
-}
-
 #endif  // CIRCT_DIALECT_XILINX_XILINXOPINTERFACES

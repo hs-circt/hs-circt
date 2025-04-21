@@ -227,7 +227,6 @@ def XlnxFDCEOp : XlnxFDCtrlBase<"fdce", [AsynchronousControl]> {
   }];
 
   let extraClassDeclaration = [{
-    bool isAsynchronous() const { return true; }
   }];
 }
 
@@ -278,7 +277,6 @@ def XlnxFDPEOp : XlnxFDCtrlBase<"fdpe", [AsynchronousControl]> {
 
 
   let extraClassDeclaration = [{
-    bool isAsynchronous() const { return true; }
   }];
 }
 
@@ -327,7 +325,6 @@ def XlnxFDREOp : XlnxFDCtrlBase<"fdre", [SynchronousControl]> {
   }];
 
   let extraClassDeclaration = [{
-    bool isSynchronous() const { return true; }
   }];
 }
 
@@ -376,7 +373,6 @@ def XlnxFDSEOp : XlnxFDCtrlBase<"fdse", [SynchronousControl]> {
   }];
 
   let extraClassDeclaration = [{
-    bool isSynchronous() const { return true; }
   }];
 }
 
