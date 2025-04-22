@@ -22,10 +22,11 @@ The initial design focuses on the UltraScale+ architecture family, which is a ma
 
 The goal of the Xlnx dialect is to provide a low-level representation of Xilinx FPGA-specific primitives and features, rather than fully emulating the full functionality of the Xilinx toolchain. The dialect focuses on hardware primitives that are difficult to express or optimize in other CIRCT dialects.
 
-Currently, the dialect focuses on the following:
+Currently, the dialect supports the following primitives:
 
-1. Lookup Table (LUT) primitives, which are the core combinatorial logic elements of the Xilinx FPGA architecture
-2. Provide enough flexibility to represent a variety of complex combinatorial logic functions
+1.  **Lookup Table (LUT)** primitives (`xlnx.lutn`, `xlnx.lut1`-`lut6`), the core combinatorial logic elements.
+2.  **Multiplexer (Mux)** primitives (`xlnx.muxf7`, `xlnx.muxf8`, `xlnx.muxf9`), representing hardened multiplexers within the CLB.
+3.  **Flip-Flop (FF)** primitives (`xlnx.fdce`), representing basic sequential elements like D-type flip-flops with clock enable and asynchronous clear.
 
 In the future, the dialect will be expanded to include:
 
@@ -78,15 +79,18 @@ To ensure that the generated code is compatible with Xilinx hardware, we impleme
 
 The validation logic is implemented using templates so that the same validation rules are shared between all LUT operations.
 
-## Subsequent development direction
+## Future Development Directions
 
-The development plan of the Xlnx dialect includes:
+The ongoing development plan for the Xlnx dialect includes:
 
-1. **Extended primitive support**: Add support for more Xilinx hardware primitives
-2. **Architecture features**: Implement architecture-specific features and constraints
-3. **Optimization**: Provide specific optimization for Xilinx FPGAs
-4. **Integration with other dialects**: Improve integration with Comb, SV and other dialects
-5. **Expression conversion**: Automatically generate the best LUT representation from high-level expressions
+1.  **Continued primitive support extension**: Building upon the initial LUT, Mux, and FF support, add representations for more Xilinx hardware primitives such as:
+    *   Block RAM and distributed RAM primitives
+    *   DSP primitives
+    *   Other Xilinx-specific hardware resources
+2.  **Architecture features**: Implement architecture-specific features and constraints
+3.  **Optimization**: Provide specific optimization for Xilinx FPGAs
+4.  **Integration with other dialects**: Improve integration with Comb, SV and other dialects
+5.  **Expression conversion**: Automatically generate the best LUT representation from high-level expressions
 
 ## FAQ
 

@@ -12,6 +12,8 @@
 // clang-format off
 #include "mlir/IR/Dialect.h"
 #include "circt/Dialect/Xlnx/XlnxDialect.h.inc"
+#include "circt/Dialect/HW/HWDialect.h"
+#include "circt/Dialect/Seq/SeqDialect.h"
 // clang-format on
 
 #endif // CIRCT_DIALECT_XLNX_XLNXDIALECT_H
