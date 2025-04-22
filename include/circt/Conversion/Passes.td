@@ -872,11 +872,24 @@ def ConvertCoreToXlnx : Pass<"convert-core-to-xlnx", "mlir::ModuleOp"> {
   }];
   let constructor = "circt::createConvertCoreToXlnxPass()";
   let dependentDialects = [
-    "hw::HWDialect",
-    "seq::SeqDialect",
-    "xlnx::XlnxDialect",
-    "comb::CombDialect"
+    "circt::hw::HWDialect",
+    "circt::seq::SeqDialect",
+    "circt::xlnx::XlnxDialect",
+    "circt::comb::CombDialect"
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertXlnxToHW
+//===----------------------------------------------------------------------===//
+
+def ConvertXlnxToHW : Pass<"convert-xlnx-to-hw", "mlir::ModuleOp"> {
+  let summary = "Convert Xlnx to HW";
+  let description = [{
+    This pass translates Xlnx to HW.
+  }];
+  let constructor = "circt::createConvertXlnxToHWPass()";
+  let dependentDialects = ["hw::HWDialect", "xlnx::XlnxDialect"];
 }
 
 #endif // CIRCT_CONVERSION_PASSES_TD
