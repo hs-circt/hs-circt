@@ -29,4 +29,27 @@ def ClockEnabled : OpInterface<"ClockEnabled"> {
   ];
 }
 
+def HWInstable : OpInterface<"HWInstable"> {
+  let cppNamespace = "circt::xlnx";
+  let description = "Pack ports and attributes into two dictionaries";
+
+  let methods = [
+    InterfaceMethod<
+      "Get the gate type",
+      "mlir::StringRef",
+      "getGateType"
+    >,
+    InterfaceMethod<
+      "Get the port dictionary (port name -> port value)",
+      "llvm::StringMap<mlir::Value>",
+      "getPortDict"
+    >,
+    InterfaceMethod<
+      "Get the attribute dictionary (attribute name -> attribute value)",
+      "llvm::StringMap<mlir::Attribute>",
+      "getAttrDict"
+    >
+  ];
+}
+
 #endif  // CIRCT_DIALECT_XILINX_XILINXOPINTERFACES
