@@ -12,7 +12,7 @@
 include "mlir/IR/OpBase.td"
 
 def Clocked : OpInterface<"Clocked"> {
-  let cppNamespace = "circt::xlnx";
+  let cppNamespace = "::circt::xlnx";
   let description = "Trait for clocked elements";
 
   let methods = [
@@ -21,7 +21,7 @@ def Clocked : OpInterface<"Clocked"> {
 }
 
 def ClockEnabled : OpInterface<"ClockEnabled"> {
-  let cppNamespace = "circt::xlnx";
+  let cppNamespace = "::circt::xlnx";
   let description = "Trait for ClockEnabled elements";
 
   let methods = [
@@ -30,13 +30,13 @@ def ClockEnabled : OpInterface<"ClockEnabled"> {
 }
 
 def HWInstable : OpInterface<"HWInstable"> {
-  let cppNamespace = "circt::xlnx";
+  let cppNamespace = "::circt::xlnx";
   let description = "Pack ports and attributes into two dictionaries";
 
   let methods = [
     InterfaceMethod<
       "Get the gate type",
-      "mlir::StringRef",
+      "std::string",
       "getGateType"
     >,
     InterfaceMethod<
@@ -46,8 +46,19 @@ def HWInstable : OpInterface<"HWInstable"> {
     >,
     InterfaceMethod<
       "Get the attribute dictionary (attribute name -> attribute value)",
-      "llvm::StringMap<mlir::Attribute>",
-      "getAttrDict"
+      "llvm::StringMap<mlir::TypedAttr>",
+      "getAttrDict",
+      (ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/""
+    >,
+    InterfaceMethod<
+      "Get the default attribute dictionary (attribute name -> attribute value)",
+      "llvm::StringMap<mlir::TypedAttr>",
+      "getDefaultAttrDict",
+      (ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/""
     >
   ];
 }

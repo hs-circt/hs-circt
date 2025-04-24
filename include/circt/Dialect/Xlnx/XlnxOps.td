@@ -26,9 +26,40 @@ include "circt/Dialect/Xlnx/XlnxTypes.td"
 // Base class for Xlnx operations
 class XlnxOp<string mnemonic, list<Trait> traits = []> : Op<XlnxDialect, mnemonic, !listconcat(traits, [HWInstable])> {
   let extraClassDeclaration = [{
-    llvm::StringRef getGateType();
+    std::string getGateType();
     llvm::StringMap<mlir::Value> getPortDict();
-    llvm::StringMap<mlir::Attribute> getAttrDict();
+    
+    template <typename A> struct MakeTypedAttr {
+      template <typename I> static mlir::TypedAttr doit(A attr, I defaultVal);
+    };
+
+    template <> struct MakeTypedAttr<::mlir::IntegerAttr> {
+      template <typename I>
+      static mlir::TypedAttr doit(mlir::IntegerAttr attr, I defaultVal) {
+        mlir::Type attrType = attr.getType();
+        mlir::MLIRContext *context = attr.getContext();
+        mlir::Builder builder(context);
+        mlir::TypedAttr defaultAttr = builder.getIntegerAttr(attrType, defaultVal);
+        return defaultAttr;
+      }
+    };
+
+    struct makeAttrTuple {
+      explicit makeAttrTuple(uint32_t idx) : idx(idx) {}
+      template <typename A, typename I>
+      mlir::TypedAttr doit(A attr, I defaultVal) {
+        if (idx == 0) {
+          return attr;
+        } else {
+          return MakeTypedAttr<A>::doit(attr, defaultVal);
+        }
+      }
+      uint32_t idx;
+    };
+
+    llvm::StringMap<mlir::TypedAttr> getSelectAttrDict(uint32_t idx);
+    llvm::StringMap<mlir::TypedAttr> getAttrDict() { return getSelectAttrDict(0); }
+    llvm::StringMap<mlir::TypedAttr> getDefaultAttrDict() { return getSelectAttrDict(1); }
   }];
 }
 
@@ -67,19 +98,22 @@ def XlnxLutNOp : XlnxLutBase<"lutn"> {
   let arguments = (ins UI64Attr:$INIT, Variadic<I1>:$inputs);
   let assemblyFormat = "`(` $inputs `)` attr-dict `:` functional-type($inputs, $result)";
   let extraClassDefinition = [{
-    llvm::StringRef XlnxLutNOp::getGateType() {
-      return "LUT" + std::to_string(getNumOperands());
+    std::string XlnxLutNOp::getGateType() {
+      return std::string("LUT") + std::to_string(getNumOperands());
     }
     llvm::StringMap<mlir::Value> XlnxLutNOp::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       for (auto it : llvm::enumerate(getInputs())) {
         ports["I" + std::to_string(it.index())] = it.value();
       }
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxLutNOp::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxLutNOp::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 0);
       return attrs;
     }
   }];
@@ -95,17 +129,20 @@ def XlnxLut1Op : XlnxLutBase<"lut1"> {
   // }];
 
   let extraClassDefinition = [{
-    llvm::StringRef XlnxLut1Op::getGateType() {
+    std::string XlnxLut1Op::getGateType() {
       return "LUT1";
     }
     llvm::StringMap<mlir::Value> XlnxLut1Op::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Input
       ports["I0"] = getInput();
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxLut1Op::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxLut1Op::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 0);
       return attrs;
     }
   }];
@@ -115,18 +152,21 @@ def XlnxLut2Op : XlnxLutBase<"lut2"> {
   let arguments = (ins UI4Attr:$INIT, I1:$input0, I1:$input1);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `)` attr-dict `:` type($input0) `,` type($input1) `->` type($result)";
   let extraClassDefinition = [{
-    llvm::StringRef XlnxLut2Op::getGateType() {
+    std::string XlnxLut2Op::getGateType() {
       return "LUT2";
     }
     llvm::StringMap<mlir::Value> XlnxLut2Op::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["I0"] = getInput0();
       ports["I1"] = getInput1();
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxLut2Op::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxLut2Op::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 0);
       return attrs;
     }
   }];
@@ -136,19 +176,22 @@ def XlnxLut3Op : XlnxLutBase<"lut3"> {
   let arguments = (ins UI8Attr:$INIT, I1:$input0, I1:$input1, I1:$input2);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `,` `I2` `:` $input2 `)` attr-dict `:` type($input0) `,` type($input1) `,` type($input2) `->` type($result)";
   let extraClassDefinition = [{
-    llvm::StringRef XlnxLut3Op::getGateType() {
+    std::string XlnxLut3Op::getGateType() {
       return "LUT3";
     }
     llvm::StringMap<mlir::Value> XlnxLut3Op::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["I0"] = getInput0();
       ports["I1"] = getInput1();
       ports["I2"] = getInput2();
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxLut3Op::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxLut3Op::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 0);
       return attrs;
     }
   }];
@@ -158,20 +201,23 @@ def XlnxLut4Op : XlnxLutBase<"lut4"> {
   let arguments = (ins UI16Attr:$INIT, I1:$input0, I1:$input1, I1:$input2, I1:$input3);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `,` `I2` `:` $input2 `,` `I3` `:` $input3 `)` attr-dict `:` type($input0) `,` type($input1) `,` type($input2) `,` type($input3) `->` type($result)";
   let extraClassDefinition = [{
-    llvm::StringRef XlnxLut4Op::getGateType() {
+    std::string XlnxLut4Op::getGateType() {
       return "LUT4";
     }
     llvm::StringMap<mlir::Value> XlnxLut4Op::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["I0"] = getInput0();
       ports["I1"] = getInput1();
       ports["I2"] = getInput2();
       ports["I3"] = getInput3();
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxLut4Op::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxLut4Op::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 0);
       return attrs;
     }
   }];
@@ -181,21 +227,24 @@ def XlnxLut5Op : XlnxLutBase<"lut5"> {
   let arguments = (ins UI32Attr:$INIT, I1:$input0, I1:$input1, I1:$input2, I1:$input3, I1:$input4);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `,` `I2` `:` $input2 `,` `I3` `:` $input3 `,` `I4` `:` $input4 `)` attr-dict `:` type($input0) `,` type($input1) `,` type($input2) `,` type($input3) `,` type($input4) `->` type($result)";
   let extraClassDefinition = [{
-    llvm::StringRef XlnxLut5Op::getGateType() {
+    std::string XlnxLut5Op::getGateType() {
       return "LUT5";
     }
     llvm::StringMap<mlir::Value> XlnxLut5Op::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["I0"] = getInput0();
       ports["I1"] = getInput1();
       ports["I2"] = getInput2();
       ports["I3"] = getInput3();
       ports["I4"] = getInput4();
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxLut5Op::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxLut5Op::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 0);
       return attrs;
     }
   }];
@@ -205,22 +254,25 @@ def XlnxLut6Op : XlnxLutBase<"lut6"> {
   let arguments = (ins UI64Attr:$INIT, I1:$input0, I1:$input1, I1:$input2, I1:$input3, I1:$input4, I1:$input5);
   let assemblyFormat = "`(` `I0` `:` $input0 `,` `I1` `:` $input1 `,` `I2` `:` $input2 `,` `I3` `:` $input3 `,` `I4` `:` $input4 `,` `I5` `:` $input5 `)` attr-dict `:` type($input0) `,` type($input1) `,` type($input2) `,` type($input3) `,` type($input4) `,` type($input5) `->` type($result)";
   let extraClassDefinition = [{
-    llvm::StringRef XlnxLut6Op::getGateType() {
+    std::string XlnxLut6Op::getGateType() {
       return "LUT6";
     }
     llvm::StringMap<mlir::Value> XlnxLut6Op::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["I0"] = getInput0();
       ports["I1"] = getInput1();
       ports["I2"] = getInput2();
       ports["I3"] = getInput3();
       ports["I4"] = getInput4();
       ports["I5"] = getInput5();
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxLut6Op::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxLut6Op::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 0);
       return attrs;
     }
   }];
@@ -259,18 +311,21 @@ def XlnxMuxF7Op : XlnxMuxBase<"muxf7"> {
   }];
 
   let extraClassDefinition = [{
-    llvm::StringRef XlnxMuxF7Op::getGateType() {
+    std::string XlnxMuxF7Op::getGateType() {
       return "MUXF7";
     }
     llvm::StringMap<mlir::Value> XlnxMuxF7Op::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["S"] = getSelect();
       ports["I0"] = getInput0();
       ports["I1"] = getInput1();
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxMuxF7Op::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
+    llvm::StringMap<mlir::TypedAttr> XlnxMuxF7Op::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
       return attrs;
     }
   }];
@@ -288,18 +343,21 @@ def XlnxMuxF8Op : XlnxMuxBase<"muxf8"> {
   }];
 
   let extraClassDefinition = [{
-    llvm::StringRef XlnxMuxF8Op::getGateType() {
+    std::string XlnxMuxF8Op::getGateType() {
       return "MUXF8";
     }
     llvm::StringMap<mlir::Value> XlnxMuxF8Op::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["S"] = getSelect();
       ports["I0"] = getInput0();
       ports["I1"] = getInput1();
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxMuxF8Op::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
+    llvm::StringMap<mlir::TypedAttr> XlnxMuxF8Op::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
       return attrs;
     }
   }];
@@ -317,18 +375,21 @@ def XlnxMuxF9Op : XlnxMuxBase<"muxf9"> {
   }];
 
   let extraClassDefinition = [{
-    llvm::StringRef XlnxMuxF9Op::getGateType() {
+    std::string XlnxMuxF9Op::getGateType() {
       return "MUXF9";
     }
     llvm::StringMap<mlir::Value> XlnxMuxF9Op::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["S"] = getSelect();
       ports["I0"] = getInput0();
       ports["I1"] = getInput1();
+      // Output
+      ports["O"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxMuxF9Op::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
+    llvm::StringMap<mlir::TypedAttr> XlnxMuxF9Op::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
       return attrs;
     }
   }];
@@ -403,23 +464,26 @@ def XlnxFDCEOp : XlnxFDCtrlBase<"fdce", [AsynchronousControl]> {
   }];
 
   let extraClassDefinition = [{
-    llvm::StringRef XlnxFDCEOp::getGateType() {
+    std::string XlnxFDCEOp::getGateType() {
       return "FDCE";
     }
     llvm::StringMap<mlir::Value> XlnxFDCEOp::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["C"] = getClock();
       ports["CE"] = getClockEnable();
       ports["CLR"] = getAsyncClear();
       ports["D"] = getDataInput();
+      // Output
+      ports["Q"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxFDCEOp::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
-      attrs["IS_C_INVERTED"] = getIS_C_INVERTEDAttr();
-      attrs["IS_D_INVERTED"] = getIS_D_INVERTEDAttr();
-      attrs["IS_CLR_INVERTED"] = getIS_CLR_INVERTEDAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxFDCEOp::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 0);
+      attrs["IS_C_INVERTED"] = makeAttrTuple(idx).doit(getIS_C_INVERTEDAttr(), 0);
+      attrs["IS_D_INVERTED"] = makeAttrTuple(idx).doit(getIS_D_INVERTEDAttr(), 0);
+      attrs["IS_CLR_INVERTED"] = makeAttrTuple(idx).doit(getIS_CLR_INVERTEDAttr(), 0);
       return attrs;
     }
   }];
@@ -470,23 +534,26 @@ def XlnxFDPEOp : XlnxFDCtrlBase<"fdpe", [AsynchronousControl]> {
   }];
 
   let extraClassDefinition = [{
-    llvm::StringRef XlnxFDPEOp::getGateType() {
+    std::string XlnxFDPEOp::getGateType() {
       return "FDPE";
     }
     llvm::StringMap<mlir::Value> XlnxFDPEOp::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["C"] = getClock();
       ports["CE"] = getClockEnable();
       ports["PRE"] = getAsyncPreset();
       ports["D"] = getDataInput();
+      // Output
+      ports["Q"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxFDPEOp::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
-      attrs["IS_C_INVERTED"] = getIS_C_INVERTEDAttr();
-      attrs["IS_D_INVERTED"] = getIS_D_INVERTEDAttr();
-      attrs["IS_PRE_INVERTED"] = getIS_PRE_INVERTEDAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxFDPEOp::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 1);
+      attrs["IS_C_INVERTED"] = makeAttrTuple(idx).doit(getIS_C_INVERTEDAttr(), 0);
+      attrs["IS_D_INVERTED"] = makeAttrTuple(idx).doit(getIS_D_INVERTEDAttr(), 0);
+      attrs["IS_PRE_INVERTED"] = makeAttrTuple(idx).doit(getIS_PRE_INVERTEDAttr(), 0);
       return attrs;
     }
   }];
@@ -537,23 +604,26 @@ def XlnxFDREOp : XlnxFDCtrlBase<"fdre", [SynchronousControl]> {
   }];
 
   let extraClassDefinition = [{
-    llvm::StringRef XlnxFDREOp::getGateType() {
+    std::string XlnxFDREOp::getGateType() {
       return "FDRE";
     }
     llvm::StringMap<mlir::Value> XlnxFDREOp::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["C"] = getClock();
       ports["CE"] = getClockEnable();
       ports["R"] = getSyncReset();
       ports["D"] = getDataInput();
+      // Output
+      ports["Q"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxFDREOp::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
-      attrs["IS_C_INVERTED"] = getIS_C_INVERTEDAttr();
-      attrs["IS_D_INVERTED"] = getIS_D_INVERTEDAttr();
-      attrs["IS_R_INVERTED"] = getIS_R_INVERTEDAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxFDREOp::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 0);
+      attrs["IS_C_INVERTED"] = makeAttrTuple(idx).doit(getIS_C_INVERTEDAttr(), 0);
+      attrs["IS_D_INVERTED"] = makeAttrTuple(idx).doit(getIS_D_INVERTEDAttr(), 0);
+      attrs["IS_R_INVERTED"] = makeAttrTuple(idx).doit(getIS_R_INVERTEDAttr(), 0);
       return attrs;
     }
   }];
@@ -604,23 +674,26 @@ def XlnxFDSEOp : XlnxFDCtrlBase<"fdse", [SynchronousControl]> {
   }];
 
   let extraClassDefinition = [{
-    llvm::StringRef XlnxFDSEOp::getGateType() {
+    std::string XlnxFDSEOp::getGateType() {
       return "FDSE";
     }
     llvm::StringMap<mlir::Value> XlnxFDSEOp::getPortDict() {
       llvm::StringMap<mlir::Value> ports;
+      // Inputs
       ports["C"] = getClock();
       ports["CE"] = getClockEnable();
       ports["S"] = getSyncSet();
       ports["D"] = getDataInput();
+      // Output
+      ports["Q"] = getResult();
       return ports;
     }
-    llvm::StringMap<mlir::Attribute> XlnxFDSEOp::getAttrDict() {
-      llvm::StringMap<mlir::Attribute> attrs;
-      attrs["INIT"] = getINITAttr();
-      attrs["IS_C_INVERTED"] = getIS_C_INVERTEDAttr();
-      attrs["IS_D_INVERTED"] = getIS_D_INVERTEDAttr();
-      attrs["IS_S_INVERTED"] = getIS_S_INVERTEDAttr();
+    llvm::StringMap<mlir::TypedAttr> XlnxFDSEOp::getSelectAttrDict(uint32_t idx) {
+      llvm::StringMap<mlir::TypedAttr> attrs;
+      attrs["INIT"] = makeAttrTuple(idx).doit(getINITAttr(), 1);
+      attrs["IS_C_INVERTED"] = makeAttrTuple(idx).doit(getIS_C_INVERTEDAttr(), 0);
+      attrs["IS_D_INVERTED"] = makeAttrTuple(idx).doit(getIS_D_INVERTEDAttr(), 0);
+      attrs["IS_S_INVERTED"] = makeAttrTuple(idx).doit(getIS_S_INVERTEDAttr(), 0);
       return attrs;
     }
   }];

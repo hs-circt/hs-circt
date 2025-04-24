@@ -1,4 +1,4 @@
-add_circt_conversion_library(XlnxToHW
+add_circt_conversion_library(CIRCTXlnxToHW
   XlnxToHW.cpp
 
   DEPENDS
