@@ -6,8 +6,10 @@ This document describes various design points of the Xlnx dialect, why they are 
 - [Introduction](#Introduction)
 - [Dialect Scope](#Dialect Scope)
 - [Operation Design](#Operation Design)
-- [LUT Operation Hierarchy](#LUT Operation Hierarchy)
-- [Generic LUT and Specific LUT](#Generic LUT and Specific LUT)
+  - [LUT Operation Hierarchy](#LUT Operation Hierarchy)
+  - [Generic LUT and Specific LUT](#Generic LUT and Specific LUT)
+  - [Mux Operation Design](#Mux Operation Design)
+  - [Flip-Flop (FDxE) Operation Design](#Flip-Flop (FDxE) Operation Design)
 - [Verifier Design](#Verifier Design)
 - [Future Development Directions](#Future Development Directions)
 - [FAQ](#FAQ)
@@ -25,8 +27,8 @@ The goal of the Xlnx dialect is to provide a low-level representation of Xilinx 
 Currently, the dialect supports the following primitives:
 
 1.  **Lookup Table (LUT)** primitives (`xlnx.lutn`, `xlnx.lut1`-`lut6`), the core combinatorial logic elements.
-2.  **Multiplexer (Mux)** primitives (`xlnx.muxf7`, `xlnx.muxf8`, `xlnx.muxf9`), representing hardened multiplexers within the CLB.
-3.  **Flip-Flop (FF)** primitives (`xlnx.fdce`), representing basic sequential elements like D-type flip-flops with clock enable and asynchronous clear.
+2.  **Multiplexer (Mux)** primitives (`xlnx.muxf7`, `xlnx.muxf8`, `xlnx.muxf9`), representing hardened multiplexers within the CLB, typically used for creating wider logic functions.
+3.  **Flip-Flop (FF)** primitives (`xlnx.fdce`, `xlnx.fdpe`, `xlnx.fdre`, `xlnx.fdse`), representing basic sequential elements like D-type flip-flops with clock enable (`CE`) and various control signals (asynchronous clear/preset, synchronous set/reset).
 
 In the future, the dialect will be expanded to include:
 
@@ -69,15 +71,45 @@ We provide two styles of LUT operations to meet different usage needs:
 
 These two styles are equivalent and users can choose which to use based on their preference.
 
+### Mux Operation Design
+
+The Mux primitives (`xlnx.muxf7`, `xlnx.muxf8`, `xlnx.muxf9`) model the dedicated hardened multiplexers found in Xilinx CLBs (specifically UltraScale+).
+
+- **Direct Mapping:** These operations provide a direct representation of the `MUXF7`, `MUXF8`, and `MUXF9` hardware primitives.
+- **Cascading:** They are designed to be used in cascades (`MUXF7` -> `MUXF8` -> `MUXF9`) to efficiently implement wider multiplexers (4:1, 8:1, etc.) or logic functions wider than 6 inputs by combining LUT outputs.
+- **Efficiency:** Representing these explicitly allows the compiler to leverage these efficient hardware resources instead of implementing the same logic purely with LUTs.
+- **Simplicity:** The operations are simple 2-to-1 multiplexers with three `i1` inputs (`in0`, `in1`, `sel`) and one `i1` output.
+
+### Flip-Flop (FDxE) Operation Design
+
+The FDxE primitives (`xlnx.fdce`, `xlnx.fdpe`, `xlnx.fdre`, `xlnx.fdse`) model the standard D-type flip-flops with clock enable available in Xilinx FPGAs.
+
+- **Variety:** The dialect provides four variants corresponding to the common hardware primitives, differing primarily in their control signal:
+    - `xlnx.fdce`: Asynchronous Clear (`CLR`)
+    - `xlnx.fdpe`: Asynchronous Preset (`PRE`)
+    - `xlnx.fdre`: Synchronous Reset (`R`)
+    - `xlnx.fdse`: Synchronous Set (`S`)
+- **Clocking:** They use the `!seq.clock` type from CIRCT's `seq` dialect for the clock input (`C`), integrating with CIRCT's sequential logic abstractions.
+- **Control:** All variants include a Clock Enable (`CE`) input. Asynchronous controls (`CLR`, `PRE`) act immediately, while synchronous controls (`R`, `S`) are sampled only at the active clock edge when `CE` is active.
+- **Attributes:** Common attributes like `INIT` (initial value) and `IS_C_INVERTED`, `IS_D_INVERTED`, `IS_CLR_INVERTED`, `IS_PRE_INVERTED`, `IS_R_INVERTED`, `IS_S_INVERTED` allow configuration of initial state and signal inversion, matching the hardware primitive options.
+- **Interfaces:** They implement CIRCT interfaces like `Clocked`, `ClockEnabled`, and traits like `AsynchronousControl` or `SynchronousControl` to provide consistent access patterns and semantics.
+
 ## Validator Design
 
 To ensure that the generated code is compatible with Xilinx hardware, we implemented comprehensive validation rules:
 
-1. **Input Quantity Validation**: Ensure that the number of LUT inputs is between 1 and 6
-2. **INIT Value Range Validation**: Ensure that the INIT attribute does not exceed the maximum value allowed by the number of inputs
-3. **Type Validation**: Ensure that all inputs and outputs are of Boolean type (i1)
+1. **LUT Validation**:
+   - **Input Quantity Validation**: Ensure that the number of LUT inputs is between 1 and 6.
+   - **INIT Value Range Validation**: Ensure that the `INIT` attribute does not exceed the maximum value allowed by the number of inputs (2^(2^N)-1 for an N-input LUT).
+   - **Type Validation**: Ensure that all inputs and outputs are of Boolean type (`i1`).
+2. **Mux Validation**:
+   - **Operand Count**: Ensure exactly three operands.
+   - **Type Validation**: Ensure all operands and the result are of Boolean type (`i1`).
+3. **FDxE Validation**:
+   - **Operand Count**: Ensure exactly four operands.
+   - **Type Validation**: Ensure the clock (`C`) is `!seq.clock` and all other operands (`CE`, `D`, control signal) and the result (`Q`) are `i1`.
 
-The validation logic is implemented using templates so that the same validation rules are shared between all LUT operations.
+The validation logic is implemented using templates and specific verifiers where necessary, ensuring consistency and correctness across different operations.
 
 ## Future Development Directions
 

@@ -4,9 +4,12 @@ This dialect contains specific operations for Xilinx FPGAs, and the current vers
 
 ## Introduction
 
-The Xlnx dialect provides a set of operations for representing and manipulating specific hardware primitives in Xilinx FPGAs. The initial implementation focuses on the Lookup Table (LUT) primitive, which is the most basic combinatorial logic unit in the Xilinx FPGA architecture.
+The Xlnx dialect provides a set of operations for representing and manipulating specific hardware primitives in Xilinx FPGAs. The initial implementation focused on Lookup Tables (LUTs), Multiplexers (Mux), and Flip-Flops (FFs), which are fundamental building blocks in the Xilinx FPGA architecture (initially targeting UltraScale+).
 
-Currently, the Xlnx dialect implements full support for 1-6 input lookup tables (LUT1-LUT6), which are the core logic elements in the UltraScale+ architecture.
+Currently, the Xlnx dialect implements full support for:
+- 1-6 input lookup tables (`xlnx.lut1` to `xlnx.lut6`, and `xlnx.lutn`)
+- Hardened multiplexers (`xlnx.muxf7`, `xlnx.muxf8`, `xlnx.muxf9`)
+- D-type flip-flops with clock enable and various controls (`xlnx.fdce`, `xlnx.fdpe`, `xlnx.fdre`, `xlnx.fdse`)
 
 ## Operation List
 
@@ -48,16 +51,30 @@ These operations typically take two data inputs (`i1`), one select input (`i1`),
 
 ### Flip-Flop (FF) Operations
 
-The dialect supports common flip-flop primitives used for sequential logic.
+The dialect supports common D-type flip-flop primitives (FDxE series) used for sequential logic, all featuring a clock input (`C`), data input (`D`), clock enable (`CE`), and one specific control signal.
 
-- `xlnx.fdce` - Represents the FDCE primitive: a D-type flip-flop with Clock Enable (`CE`) and asynchronous Clear (`CLR`).
+- `xlnx.fdce` - D-type flip-flop with Clock Enable (`CE`) and **asynchronous Clear** (`CLR`).
+  - When `CLR` is active (high), output `Q` is forced to 0 immediately.
+  ```mlir
+  %q = xlnx.fdce(C: %c, CE: %ce, CLR: %clr, D: %d) : (!seq.clock, i1, i1, i1) -> i1
+  ```
 
-The `FDCE` primitive captures the data input `D` on the rising edge of the clock `C` only when the clock enable `CE` is active (typically high). The asynchronous clear `CLR`, when active (typically high), resets the output `Q` to 0 regardless of other inputs.
+- `xlnx.fdpe` - D-type flip-flop with Clock Enable (`CE`) and **asynchronous Preset** (`PRE`).
+  - When `PRE` is active (high), output `Q` is forced to 1 immediately.
+  ```mlir
+  %q = xlnx.fdpe(C: %c, CE: %ce, PRE: %pre, D: %d) : (!seq.clock, i1, i1, i1) -> i1
+  ```
 
-Its MLIR representation is:
+- `xlnx.fdre` - D-type flip-flop with Clock Enable (`CE`) and **synchronous Reset** (`R`).
+  - When `R` and `CE` are active (high) at the clock edge, output `Q` becomes 0.
+  ```mlir
+  %q = xlnx.fdre(C: %c, CE: %ce, R: %r, D: %d) : (!seq.clock, i1, i1, i1) -> i1
+  ```
 
-```mlir
-%q = xlnx.fdce(%d, %c, %ce, %clr) : (i1, seq.clock, i1, i1) -> i1
-```
+- `xlnx.fdse` - D-type flip-flop with Clock Enable (`CE`) and **synchronous Set** (`S`).
+  - When `S` and `CE` are active (high) at the clock edge, output `Q` becomes 1.
+  ```mlir
+  %q = xlnx.fdse(C: %c, CE: %ce, S: %s, D: %d) : (!seq.clock, i1, i1, i1) -> i1
+  ```
 
-Where `%d`, `%ce`, `%clr` are `i1` type, `%c` is `seq.clock`, and the output `%q` is `i1`.
+All FF operations sample the data input `D` on the active clock edge (typically rising edge) only when the clock enable `CE` is active (high) and the respective control signal is inactive. The clock input (`C`) uses the `!seq.clock` type from the `seq` dialect, while all other inputs and the output (`Q`) are `i1`.
