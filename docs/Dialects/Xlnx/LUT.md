@@ -110,15 +110,15 @@ The Xlnx dialect provides two styles of LUT operations:
 
 The `INIT` attribute is a crucial parameter that defines the functionality of the LUT. It represents a truth table where each bit corresponds to the output value for a specific input combination. The bit width of the INIT attribute varies based on the number of inputs:
 
-| LUT Type | Inputs | INIT Bit Width | INIT Type | Max Value |
-|----------|--------|---------------|-----------|-----------|
-| LUT1     | 1      | 2             | ui2       | 3         |
-| LUT2     | 2      | 4             | ui4       | 15        |
-| LUT3     | 3      | 8             | ui8       | 255       |
-| LUT4     | 4      | 16            | ui16      | 65,535    |
-| LUT5     | 5      | 32            | ui32      | 4,294,967,295 |
-| LUT6     | 6      | 64            | ui64      | 18,446,744,073,709,551,615 |
-| LUTN     | N      | 64            | ui64      | Same as above (lower 2^N bits used) |
+| LUT Type | Inputs | INIT Bit Width | INIT Type | Max Value                           |
+|----------|--------|----------------|-----------|-------------------------------------|
+| LUT1     | 1      | 2              | ui2       | 3                                   |
+| LUT2     | 2      | 4              | ui4       | 15                                  |
+| LUT3     | 3      | 8              | ui8       | 255                                 |
+| LUT4     | 4      | 16             | ui16      | 65,535                              |
+| LUT5     | 5      | 32             | ui32      | 4,294,967,295                       |
+| LUT6     | 6      | 64             | ui64      | 18,446,744,073,709,551,615          |
+| LUTN     | N      | 64             | ui64      | Same as above (lower 2^N bits used) |
 
 For an N-input LUT, the INIT attribute uses 2^N bits. The index of each bit corresponds to the binary encoding of the input, following these rules:
 - For the combination of inputs (I0, I1, ..., I(N-1)), the corresponding bit index is: (I(N-1) << (N-1)) | ... | (I1 << 1) | I0
@@ -128,23 +128,6 @@ For example, for a 2-input LUT, the 4 bits of the `INIT` attribute are used, map
 - INIT[1]: Output when input is (I0=1, I1=0)
 - INIT[2]: Output when input is (I0=0, I1=1)
 - INIT[3]: Output when input is (I0=1, I1=1)
-
-### Common Logic Functions
-
-Here are some common INIT values for 2-input logic functions:
-
-| Logic Function | INIT (Binary) | INIT (Decimal) | Description |
-|----------------|--------------|----------------|-------------|
-| AND            | 1000         | 8              | Output 1 only when both inputs are 1 |
-| OR             | 1110         | 14             | Output 1 when either input is 1 |
-| XOR            | 0110         | 6              | Output 1 when inputs are different |
-| NAND           | 0111         | 7              | Output 0 only when both inputs are 1 |
-| NOR            | 0001         | 1              | Output 1 only when both inputs are 0 |
-| XNOR           | 1001         | 9              | Output 1 when inputs are the same |
-| Buffer (I0)    | 1010         | 10             | Output equals I0, ignores I1 |
-| Buffer (I1)    | 1100         | 12             | Output equals I1, ignores I0 |
-| Constant 0     | 0000         | 0              | Always outputs 0 |
-| Constant 1     | 1111         | 15             | Always outputs 1 |
 
 ## Examples
 
@@ -173,7 +156,7 @@ Here are some common INIT values for 2-input logic functions:
 
 // Create a 4-input function that outputs 1 if exactly 2 inputs are 1
 // INIT pattern needs to match this specific condition
-%exactly_two = xlnx.lut4(I0: %a, I1: %b, I2: %c, I3: %d) {INIT = 6460 : ui16} : i1, i1, i1, i1 -> i1
+%exactly_two = xlnx.lut4(I0: %a, I1: %b, I2: %c, I3: %d) {INIT = 5736 : ui16} : i1, i1, i1, i1 -> i1
 ```
 
 ### LUT Cascading

@@ -30,15 +30,12 @@ This operation models the MUXF7 primitive, a 2-to-1 multiplexer that is typicall
 
 **Logic Table:**
 
-| Inputs |||  Output |
-|--------|--------|--------|--------|
-| sel | in0 | in1 || out |
-| 0 | x | 0 || x |
-| 0 | x | 1 || x |
-| 1 | 0 | x || x |
-| 1 | 1 | x || x |
-
-Where 'x' represents the value that is passed through to the output based on the select signal.
+| sel    | in0    | in1    | out     |
+|--------|--------|--------|---------|
+| 0      | 0      | x      | 0       |
+| 0      | 1      | x      | 1       |
+| 1      | x      | 0      | 0       |
+| 1      | x      | 1      | 1       |
 
 ### `xlnx.muxf8`
 
@@ -58,13 +55,12 @@ This operation models the MUXF8 primitive, a 2-to-1 multiplexer that is typicall
 
 **Logic Table:**
 
-| Inputs |||  Output |
-|--------|--------|--------|--------|
-| sel | in0 | in1 || out |
-| 0 | x | 0 || x |
-| 0 | x | 1 || x |
-| 1 | 0 | x || x |
-| 1 | 1 | x || x |
+| sel    | in0    | in1    | out     |
+|--------|--------|--------|---------|
+| 0      | 0      | x      | 0       |
+| 0      | 1      | x      | 1       |
+| 1      | x      | 0      | 0       |
+| 1      | x      | 1      | 1       |
 
 ### `xlnx.muxf9`
 
@@ -84,13 +80,12 @@ This operation models the MUXF9 primitive, a 2-to-1 multiplexer, potentially pla
 
 **Logic Table:**
 
-| Inputs |||  Output |
-|--------|--------|--------|--------|
-| sel | in0 | in1 || out |
-| 0 | x | 0 || x |
-| 0 | x | 1 || x |
-| 1 | 0 | x || x |
-| 1 | 1 | x || x |
+| sel    | in0    | in1    | out     |
+|--------|--------|--------|---------|
+| 0      | 0      | x      | 0       |
+| 0      | 1      | x      | 1       |
+| 1      | x      | 0      | 0       |
+| 1      | x      | 1      | 1       |
 
 ## Hardware Implementation
 

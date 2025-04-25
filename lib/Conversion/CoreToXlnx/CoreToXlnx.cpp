@@ -43,14 +43,39 @@ namespace {
 
 enum class ResetType { SyncSet, SyncReset, Unknown };
 
+/**
+ * @brief Helper class for rewriting `seq.compreg` and `seq.compreg.ce` operations.
+ *
+ * This template class provides the common logic for converting `seq::CompRegOp` or
+ * `seq::CompRegClockEnabledOp` into Xilinx flip-flop primitives (`xlnx::XlnxFDSEOp`
+ * or `xlnx::XlnxFDREOp`). It handles the conversion for both single-bit and
+ * multi-bit registers and determines whether to use FDSE (synchronous set) or
+ * FDRE (synchronous reset) based on the reset value.
+ *
+ * @tparam OpLowering The specific operation conversion class (e.g., `CompRegLowering`
+ *                    or `CompRegCELowering`) that provides details specific to the
+ *                    operation, such as how to get the clock enable signal.
+ * @tparam Op The original MLIR operation type being converted (e.g., `seq::CompRegOp`
+ *            or `seq::CompRegClockEnabledOp`).
+ */
 template <typename OpLowering, typename Op>
 struct CompRegRewriterHelper : public OpConversionPattern<Op> {
   using OpConversionPattern<Op>::OpConversionPattern;
   using OpAdaptor = typename OpConversionPattern<Op>::OpAdaptor;
 
-  // Only if hasReset is true, we need to determine if we should use FDSE or
-  // FDRE If hasReset is false, we can directly use FDRE with a constant 0
-  // reset signal and skip the FDSE/FDRE determination
+  /**
+   * @brief Determines the reset type (synchronous set or synchronous reset) based on a single bit of the reset value.
+   *
+   * This function only needs to be called when a reset signal is present (i.e., `hasReset` is true)
+   * to determine whether FDSE or FDRE should be used.
+   * If no reset signal exists, FDRE can be used directly with the reset signal tied to constant 0,
+   * skipping this determination.
+   *
+   * @param op The original operation, used for emitting errors.
+   * @param resetBitValue The single-bit `APInt` of the reset value. Must be of i1 type.
+   * @return ResetType indicating synchronous set (`SyncSet`), synchronous reset (`SyncReset`), or unknown (`Unknown`).
+   *         Returns `Unknown` and emits an error if `resetBitValue` is not a valid i1 value.
+   */
   ResetType getResetType(Op op, const APInt &resetBitValue) const {
     // Check if the constant is i1 type.
     if (resetBitValue.getBitWidth() != 1) {
@@ -78,15 +103,29 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
     }
   }
 
+  /**
+   * @brief Context structure for handling multi-bit register conversions.
+   *
+   * This struct encapsulates the state and helper functions needed when converting
+   * a multi-bit register bit-by-bit.
+   */
   struct MultiBitContext {
-    Op op; // Original operation
-    uint32_t numBits;
-    uint32_t selectedIndex;
-    Value inputDataSignal;
-    Value resetValue;
-    std::vector<Value> outputDataSignals;
-    ConversionPatternRewriter &rewriter;
+    Op op; ///< The original MLIR operation.
+    uint32_t numBits; ///< The number of bits in the register.
+    uint32_t selectedIndex; ///< The index of the bit currently being processed.
+    Value inputDataSignal; ///< The original multi-bit input data signal.
+    Value resetValue; ///< The original reset value (potentially a multi-bit constant).
+    std::vector<Value> outputDataSignals; ///< Stores the output signals from each single-bit flip-flop.
+    ConversionPatternRewriter &rewriter; ///< The rewriter used for creating new operations.
 
+    /**
+     * @brief Constructs a MultiBitContext.
+     *
+     * @param op The original MLIR operation.
+     * @param inputDataSignal The original multi-bit input data signal.
+     * @param resetValue The original reset value (potentially a multi-bit constant).
+     * @param rewriter The rewriter used for creating new operations.
+     */
     MultiBitContext(Op op, Value inputDataSignal, Value resetValue,
                     ConversionPatternRewriter &rewriter)
         : op(op), inputDataSignal(inputDataSignal), resetValue(resetValue),
@@ -96,10 +135,20 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
       selectedIndex = 0;
     }
 
+    /** @brief Moves to the next bit. */
     void next() { selectedIndex++; }
 
+    /** @brief Checks if all bits have been processed. */
     bool isDone() const { return selectedIndex >= numBits; }
 
+    /**
+     * @brief Gets the single-bit input data signal for the current index.
+     *
+     * If the register is multi-bit, creates a `comb::ExtractOp` to extract the signal for the current bit.
+     * If the register is single-bit, returns the original input signal directly.
+     *
+     * @return The single-bit input data signal (i1) for the current bit.
+     */
     Value get1BitInputDataSignal() const {
       if (numBits > 1) {
         return rewriter.create<comb::ExtractOp>(op->getLoc(), inputDataSignal,
@@ -110,6 +159,19 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
       }
     }
 
+    /**
+     * @brief Gets the single-bit reset value for the current index.
+     *
+     * - If the register is single-bit:
+     *   - If `resetValue` is an `hw::ConstantOp`, extracts its `APInt` value.
+     *   - If `resetValue` is not a constant, or its type is not i1, emits an error and returns `std::nullopt`.
+     * - If the register is multi-bit:
+     *   - `resetValue` MUST be an `hw::ConstantOp`.
+     *   - Extracts the bit at the current index from the multi-bit constant value and returns it as an `APInt`.
+     *   - If `resetValue` is not a constant or lacks an `IntegerAttr`, emits an error and returns `std::nullopt`.
+     *
+     * @return An `std::optional<APInt>` containing the reset value for the current bit. Returns `std::nullopt` if it cannot be determined or an error occurs.
+     */
     std::optional<APInt> get1BitResetValue() const {
       Location loc = op->getLoc();
       if (numBits == 1) {
@@ -169,10 +231,22 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
       return singleBitValue; // Return the extracted APInt bit
     }
 
+    /**
+     * @brief Adds the output signal of a single-bit flip-flop to the results vector.
+     * @param outputDataSignal The output `Value` of the single-bit flip-flop.
+     */
     void addOutputDataSignal(Value outputDataSignal) {
       outputDataSignals.push_back(outputDataSignal);
     }
 
+    /**
+     * @brief Gets the final (potentially multi-bit) output data signal.
+     *
+     * If the register is multi-bit, creates a `comb::ConcatOp` to concatenate all single-bit output signals.
+     * If the register is single-bit, returns the single output signal directly.
+     *
+     * @return The final output data signal.
+     */
     Value getOutputDataSignal() const {
       if (numBits > 1) {
         return rewriter.create<comb::ConcatOp>(op->getLoc(), outputDataSignals);
@@ -185,6 +259,61 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
     }
   };
 
+  /**
+   * @brief Matches a `seq.compreg` or `seq.compreg.ce` operation and rewrites it into Xilinx flip-flops.
+   *
+   * This function implements the core conversion logic:
+   * 1. Gets the operand adaptor.
+   * 2. Gets the clock, clock enable, reset signal, and reset value.
+   * 3. Handles the case where no reset signal is provided (synthesizes a synchronous reset to 0).
+   * 4. Validates the reset signal and reset value (e.g., multi-bit reset value must be constant).
+   * 5. Creates a `MultiBitContext` to handle potential bit-wise conversion.
+   * 6. Iterates through each bit:
+   *    a. Extracts the single-bit input data.
+   *    b. Extracts the single-bit reset value (if present).
+   *    c. Determines the reset type (FDSE or FDRE).
+   *    d. Creates the corresponding `xlnx::XlnxFDSEOp` or `xlnx::XlnxFDREOp`.
+   *    e. Adds the single-bit output to the `MultiBitContext`.
+   * 7. Gets the final (potentially multi-bit) output signal from the `MultiBitContext`.
+   * 8. Replaces the original operation.
+   *
+   * @param op The original operation to match and rewrite.
+   * @param adaptor The operand adaptor, providing access to the operands.
+   * @param rewriter The conversion pattern rewriter used for IR modifications.
+   * @return `success()` if the match and rewrite were successful, `failure()` otherwise.
+   *
+   * @example Convert `seq.compreg` to `xlnx.fdre` (no reset -> default reset to 0)
+   * ```mlir
+   * %data_in = hw.constant 1 : i8
+   * %clk = // ... clock signal
+   * %out = seq.compreg %data_in, %clk : i8
+   * ```
+   * Converts to:
+   * ```mlir
+   * %c0_i1 = hw.constant 0 : i1
+   * %c1_i1 = hw.constant 1 : i1 // Clock enable (constant true)
+   * %c0_i8 = hw.constant 0 : i8 // Synthesized reset value
+   * %extracted_bits = // ... 8 x comb.extract ops from %data_in
+   * %fdre_outs = // ... 8 x xlnx.fdre %clk, %c1_i1, %c0_i1, %extracted_bits[...]
+   * %out = comb.concat %fdre_outs[...] : (i1, i1, i1, i1, i1, i1, i1, i1) -> i8
+   * ```
+   *
+   * @example Convert `seq.compreg` to `xlnx.fdse` (reset value is all ones)
+   * ```mlir
+   * %data_in = hw.constant 0 : i4
+   * %clk = // ... clock signal
+   * %rst = // ... reset signal (i1)
+   * %rst_val = hw.constant 15 : i4 // All ones (binary 1111)
+   * %out = seq.compreg %data_in, %clk, %rst, %rst_val : i4
+   * ```
+   * Converts to:
+   * ```mlir
+   * %c1_i1 = hw.constant 1 : i1 // Clock enable
+   * %extracted_bits = // ... 4 x comb.extract ops from %data_in
+   * %fdse_outs = // ... 4 x xlnx.fdse %clk, %c1_i1, %rst, %extracted_bits[...]
+   * %out = comb.concat %fdse_outs[...] : (i1, i1, i1, i1) -> i4
+   * ```
+   */
   LogicalResult
   matchAndRewrite(Op op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -314,17 +443,42 @@ struct CompRegRewriterHelper : public OpConversionPattern<Op> {
   }
 };
 
-/// Converts `seq.compreg` to `xlnx.fdse` or `xlnx.fdre` based on reset value.
-/// If reset value is 1, use `xlnx.fdse` (synchronous set).
-/// If reset value is 0 or not specified, use `xlnx.fdre` (synchronous reset).
+/**
+ * @brief Conversion pattern for lowering `seq.compreg` to `xlnx.fdse` or `xlnx.fdre`.
+ *
+ * This pattern utilizes `CompRegRewriterHelper` to handle the common logic for
+ * converting register-like operations. It specifically targets the `seq.compreg`
+ * operation. Since `seq.compreg` does not have an explicit clock enable input,
+ * this pattern provides a `getClockEnable` implementation that always returns a
+ * constant `true` value, effectively treating the register as always enabled.
+ * The conversion yields either `xlnx.fdse` (synchronous set) or `xlnx.fdre`
+ * (synchronous reset) based on the reset value of the `seq.compreg`.
+ */
 struct CompRegLowering
     : public CompRegRewriterHelper<CompRegLowering, CompRegOp> {
   using CompRegRewriterHelper<CompRegLowering,
                               CompRegOp>::CompRegRewriterHelper;
 
-  /// Helper function to find or create a constant in a module.
-  /// Returns the constant value if found, or creates a new one at the beginning
-  /// of the module body if not found.
+  /**
+   * @brief Finds or creates a constant value within a module.
+   *
+   * This helper function searches for or creates a constant with a specific type and value
+   * within the given `hw.module`. It first searches the top-level operations of `hwModule`
+   * for an existing `hw::ConstantOp` with the specified type and value.
+   * If a matching constant is found, its result `Value` is returned.
+   * If not found, a new `hw::ConstantOp` is created at the beginning of the module body,
+   * and its result `Value` is returned. This approach helps reuse constants, avoid redundancy,
+   * and keep the generated IR clean.
+   *
+   * @param op The current operation, used for error reporting and getting location info (if `hwModule` is invalid or has no body).
+   * @param hwModule The parent `hw.module` to search or create the constant within.
+   * @param type The desired MLIR type of the constant.
+   * @param valueAttr The `IntegerAttr` value of the constant.
+   * @param rewriter The `ConversionPatternRewriter` used to create the new constant op if needed.
+   * @return The `Value` of the found or newly created constant. In error cases (e.g., invalid `hwModule`),
+   *         it might fall back to creating a local constant at `op`'s location, but this usually indicates an
+   *         unexpected IR structure upstream.
+   */
   static Value
   getOrCreateConstantInModule(Operation *op, hw::HWModuleOp hwModule, Type type,
                               IntegerAttr valueAttr,
@@ -372,6 +526,18 @@ struct CompRegLowering
     return rewriter.create<hw::ConstantOp>(hwModule.getLoc(), valueAttr);
   }
 
+  /**
+   * @brief Gets the clock enable signal for `seq.compreg`.
+   *
+   * `seq.compreg` does not have an explicit clock enable input, so it is always enabled.
+   * This function returns a constant `Value` representing `true` (i1 value 1).
+   * It uses `getOrCreateConstantInModule` to reuse or create this constant.
+   *
+   * @param op The original `CompRegOp` operation.
+   * @param adaptor The operand adaptor (unused).
+   * @param rewriter The rewriter used to create the constant if needed.
+   * @return A constant i1 `Value` representing `true` (1).
+   */
   static Value getClockEnable(
       CompRegOp op,
       CompRegRewriterHelper<CompRegLowering, CompRegOp>::OpAdaptor adaptor,
@@ -387,14 +553,24 @@ struct CompRegLowering
   }
 };
 
-/// Converts `seq.compreg.ce` to `xlnx.fdse` or `xlnx.fdre` based on reset
-/// value. If reset value is 1, use `xlnx.fdse` (synchronous set). If reset
-/// value is 0 or not specified, use `xlnx.fdre` (synchronous reset).
+/// @brief Conversion pattern for lowering `seq.compreg.ce` to `xlnx.fdse` or `xlnx.fdre`.
+/// Uses `CompRegRewriterHelper` for the conversion logic.
+/// Provides the `getClockEnable` implementation for `seq.compreg.ce` (returns its clock enable input).
 struct CompRegCELowering
     : public CompRegRewriterHelper<CompRegCELowering, CompRegClockEnabledOp> {
   using CompRegRewriterHelper<CompRegCELowering,
                               CompRegClockEnabledOp>::CompRegRewriterHelper;
 
+  /**
+   * @brief Gets the clock enable signal for `seq.compreg.ce`.
+   *
+   * `seq.compreg.ce` has an explicit clock enable input. This function returns that input directly.
+   *
+   * @param op The original `CompRegClockEnabledOp` operation (unused).
+   * @param adaptor The operand adaptor, used to access the clock enable input.
+   * @param rewriter The rewriter (unused).
+   * @return The clock enable input `Value` of the `seq.compreg.ce`.
+   */
   static Value getClockEnable(
       CompRegClockEnabledOp op,
       CompRegRewriterHelper<CompRegCELowering, CompRegClockEnabledOp>::OpAdaptor
@@ -417,9 +593,17 @@ struct CoreToXlnxPass
 };
 } // namespace
 
-/// Configures the legality rules for the CoreToXlnx conversion.
-/// Marks seq.compreg and seq.compreg.ce as illegal, while marking necessary
-/// Xlnx, Builtin, HW, and Comb dialect ops/dialects as legal.
+/**
+ * @brief Configures the legality rules for the CoreToXlnx conversion.
+ *
+ * This function defines which operations are legal after the conversion and which must be converted:
+ * - Marks `seq::CompRegOp` and `seq::CompRegClockEnabledOp` as illegal.
+ * - Marks `XlnxDialect`, `mlir::BuiltinDialect`, `HWDialect` as legal.
+ * - Marks necessary `hw::ConstantOp`, `hw::InstanceOp`, `comb::ExtractOp`, `comb::ConcatOp` as legal.
+ * - Marks `seq::InitialOp` and `seq::YieldOp`, needed for initial values, as legal.
+ *
+ * @param target The conversion target to configure.
+ */
 static void populateLegality(ConversionTarget &target) {
   // Mark seq.compreg and seq.compreg.ce as illegal
   target.addIllegalOp<seq::CompRegOp, seq::CompRegClockEnabledOp>();
@@ -440,12 +624,33 @@ static void populateLegality(ConversionTarget &target) {
   target.addLegalOp<seq::InitialOp, seq::YieldOp>();
 }
 
-/// Populates the given pattern set with the operation conversion patterns
-/// required for the CoreToXlnx conversion (CompRegLowering, CompRegCELowering).
+/**
+ * @brief Populates the pattern set with operation conversion patterns.
+ *
+ * Populates the given pattern set with the operation conversion patterns required for the CoreToXlnx conversion.
+ * Specifically, it adds the patterns responsible for the actual operation conversion
+ * (`CompRegLowering` and `CompRegCELowering`) to the `patterns` set. These patterns
+ * will be used during `applyPartialConversion` to match and rewrite the corresponding
+ * `seq::CompRegOp` and `seq::CompRegClockEnabledOp` operations.
+ *
+ * @param patterns The rewrite pattern set to populate with conversion patterns.
+ */
 static void populateOpConversion(RewritePatternSet &patterns) {
   patterns.add<CompRegLowering, CompRegCELowering>(patterns.getContext());
 }
 
+/**
+ * @brief Runs the conversion pass on an operation (typically the top-level module).
+ *
+ * This function sets up the conversion target and rewrite patterns, then applies partial conversion.
+ * 1. Gets the MLIR context and the top-level module operation.
+ * 2. Creates a ConversionTarget.
+ * 3. Creates a RewritePatternSet.
+ * 4. Calls `populateLegality` to configure which operations are legal or illegal.
+ * 5. Calls `populateOpConversion` to add conversion patterns.
+ * 6. Applies the conversion using `applyPartialConversion`.
+ * 7. Signals pass failure if the conversion fails.
+ */
 void CoreToXlnxPass::runOnOperation() {
   MLIRContext &context = getContext();
   ModuleOp module = getOperation();
@@ -462,7 +667,12 @@ void CoreToXlnxPass::runOnOperation() {
     signalPassFailure();
 }
 
-/// Creates the CoreToXlnx pass.
+/**
+ * @brief Creates an instance of the CoreToXlnx conversion pass.
+ *
+ * This is the factory function used for registering and creating the pass.
+ * @return A unique pointer (`std::unique_ptr`) to the newly created `CoreToXlnxPass` instance.
+ */
 std::unique_ptr<OperationPass<ModuleOp>> circt::createConvertCoreToXlnxPass() {
   return std::make_unique<CoreToXlnxPass>();
 }
