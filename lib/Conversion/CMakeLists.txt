@@ -33,6 +33,7 @@ add_subdirectory(SMTToZ3LLVM)
 add_subdirectory(VerifToSV)
 add_subdirectory(CalyxNative)
 add_subdirectory(LTLToCore)
+add_subdirectory(CoreDSPMapping)
 
 if(CIRCT_SLANG_FRONTEND_ENABLED)
   add_subdirectory(ImportVerilog)

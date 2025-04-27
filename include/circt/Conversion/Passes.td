@@ -518,6 +518,22 @@ def HandshakeToHW : Pass<"lower-handshake-to-hw", "mlir::ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// CoreDSPMapping
+//===----------------------------------------------------------------------===//
+
+def CoreDSPMapping : Pass<"dsp-mapping", "mlir::ModuleOp"> {
+  let summary = "DSP Mapping";
+  let description = [{
+    This pass will map and package the resources to DSPs.
+  }];
+  let constructor = "circt::createCoreDSPMappingPass()";
+  let dependentDialects = [
+    "hw::HWDialect",
+    "comb::CombDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // Moore to Comb/HW/LLHD
 //===----------------------------------------------------------------------===//
 
