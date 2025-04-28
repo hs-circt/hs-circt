@@ -12,12 +12,14 @@
 
 #include "circt/Dialect/Comb/CombDialect.h"
 #include "circt/Dialect/HW/HWDialect.h"
+#include "circt/Dialect/HW/HWOps.h"
 #include "circt/Dialect/Seq/SeqDialect.h"
+#include "circt/Support/Passes.h"
 #include "circt/Support/Version.h"
+#include "circt/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OwningOpRef.h"
@@ -29,6 +31,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -72,6 +75,10 @@ static cl::opt<std::string> outputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
                                            cl::init("-"),
                                            cl::cat(mainCategory));
+
+static cl::opt<std::string> topName("top", cl::desc("Top module name"),
+                                    cl::value_desc("name"), cl::init(""),
+                                    cl::cat(mainCategory));
 
 static cl::opt<bool>
     verifyPasses("verify-each",
@@ -130,6 +137,36 @@ LogicalResult executeLogicSyn(MLIRContext &context) {
   tryMockturtle();
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Conversion Infrastructure
+//===----------------------------------------------------------------------===//
+static void populateSynthesisPipeline(PassManager &pm) {
+  auto pipeline = [](OpPassManager &mpm) {
+    // Add the AIG to Comb at the scope exit if requested.
+    auto addAIGToComb =
+        llvm::make_scope_exit([&]() { mpm.addPass(createCSEPass()); });
+
+    // {
+    //   // Partially legalize Comb to AIG, run CSE and canonicalization.
+    //   circt::ConvertCombToAIGOptions options;
+    //   partiallyLegalizeCombToAIG<comb::AndOp, comb::OrOp, comb::XorOp,
+    //                              comb::MuxOp, comb::ICmpOp, hw::ArrayGetOp,
+    //                              hw::ArraySliceOp, hw::ArrayCreateOp,
+    //                              hw::ArrayConcatOp, hw::AggregateConstantOp>(
+    //       options.additionalLegalOps);
+    //   mpm.addPass(circt::createConvertCombToAIG(options));
+    // }
+    mpm.addPass(createCSEPass());
+  };
+
+  if (topName.empty()) {
+    pipeline(pm.nest<hw::HWModuleOp>());
+  } else {
+    pm.addPass(circt::createHierarchicalRunner(topName, pipeline));
+  }
+  // TODO: Add LUT mapping, etc.
 }
 
 /// The entry point for the `circt-logic-syn` tool:
