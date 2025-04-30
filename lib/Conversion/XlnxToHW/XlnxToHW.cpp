@@ -74,8 +74,8 @@ private:
    */
   LogicalResult processPorts(xlnx::HWInstable op,
                              ConversionPatternRewriter &rewriter,
-                             SmallVectorImpl<hw::PortInfo> &modulePorts,
-                             SmallVectorImpl<Value> &instanceInputs) const {
+                             SmallVector<hw::PortInfo> &modulePorts,
+                             SmallVector<Value> &instanceInputs) const {
     MLIRContext *context = op->getContext();
     auto portDict = op.getPortDict();
     DenseMap<Value, StringRef> valueToPortName;
@@ -172,53 +172,74 @@ private:
   FailureOr<hw::HWModuleExternOp> getOrCreateExternModule(
       xlnx::HWInstable op, ConversionPatternRewriter &rewriter,
       StringRef gateType, ArrayRef<hw::PortInfo> modulePorts) const {
+
     ModuleOp parentModule = op->getParentOfType<ModuleOp>();
     MLIRContext *context = op->getContext();
     Location loc = op->getLoc();
-    hw::HWModuleExternOp externModule;
 
     // Search for existing extern module
-    for (auto mod : parentModule.getOps<hw::HWModuleExternOp>()) {
-      if (mod.getName() == gateType) {
-        // Validate signature of existing module
-        auto existingPorts = mod.getPortList();
-        if (existingPorts.size() != modulePorts.size()) {
-          op.emitError("Found existing extern module '")
-              << gateType << "' but port count mismatch (expected "
-              << modulePorts.size() << ", found " << existingPorts.size()
-              << ")";
-          return failure();
-        }
+    auto externModule =
+        parentModule.lookupSymbol<hw::HWModuleExternOp>(gateType);
+    if (externModule) {
+      // Validate signature of existing module
 
-        bool signatureMatch = true;
-        for (size_t i = 0; i < modulePorts.size(); ++i) {
-          if (modulePorts[i].name != existingPorts[i].name ||
-              modulePorts[i].type != existingPorts[i].type ||
-              modulePorts[i].dir != existingPorts[i].dir) {
-            signatureMatch = false;
-            op.emitError("Found existing extern module '")
-                << gateType << "' but port signature mismatch at index " << i
-                << ": expected ('" << modulePorts[i].name.getValue() << "', "
-                << modulePorts[i].type << ", "
-                << getDirectionString(modulePorts[i].dir) << "), found ('"
-                << existingPorts[i].name.getValue() << "', "
-                << existingPorts[i].type << ", "
-                << getDirectionString(existingPorts[i].dir) << ")";
-            break; // Report first mismatch
-          }
-        }
+      // Validate the ports
 
-        if (!signatureMatch) {
-          return failure();
-        }
-
-        externModule = mod; // Found matching module
-        break;
+      auto existingPorts = externModule.getPortList();
+      if (existingPorts.size() != modulePorts.size()) {
+        auto errorMsg =
+            llvm::formatv("Found existing extern module '{0}' but port count "
+                          "mismatch (expected {1}, found {2})",
+                          gateType, modulePorts.size(), existingPorts.size());
+        op.emitError(errorMsg);
+        return failure();
       }
-    }
 
-    // Create new extern module if not found
-    if (!externModule) {
+      for (size_t i = 0; i < modulePorts.size(); ++i) {
+        if (modulePorts[i].name != existingPorts[i].name ||
+            modulePorts[i].type != existingPorts[i].type ||
+            modulePorts[i].dir != existingPorts[i].dir) {
+          auto errorMsg = llvm::formatv(
+              "Found existing extern module '{0}' but port signature mismatch "
+              "at index {1}: expected ('{2}', {3}, {4}), found ('{5}', {6}, "
+              "{7})",
+              gateType, i,
+              // Expected
+              modulePorts[i].name.getValue(), modulePorts[i].type,
+              getDirectionString(modulePorts[i].dir),
+              // Found
+              existingPorts[i].name.getValue(), existingPorts[i].type,
+              getDirectionString(existingPorts[i].dir));
+          op.emitError(errorMsg);
+          return failure();
+        }
+      }
+
+      // Validate the parameters
+
+      const auto &expectedParams = getParameters(op, rewriter, true);
+      const auto &foundParams = externModule.getParameters();
+      if (expectedParams.size() != foundParams.size()) {
+        auto errorMsg = llvm::formatv(
+            "Found existing extern module '{0}' but parameter count mismatch "
+            "(expected {1}, found {2})",
+            gateType, expectedParams.size(), foundParams.size());
+        op.emitError(errorMsg);
+        return failure();
+      }
+
+      for (size_t i = 0; i < expectedParams.size(); ++i) {
+        if (expectedParams[i] != foundParams[i]) {
+          auto errorMsg = llvm::formatv(
+              "Found existing extern module '{0}' but parameter mismatch at "
+              "index {1}: expected ('{2}', {3}), found ('{4}', {5})",
+              gateType, i, expectedParams[i], foundParams[i]);
+          op.emitError(errorMsg);
+          return failure();
+        }
+      }
+    } else {
+      // Create new extern module if not found
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(parentModule.getBody());
       externModule = rewriter.create<hw::HWModuleExternOp>(
@@ -267,21 +288,25 @@ private:
    * Assume `op` is an xlnx::HWInstable operation with the following attributes:
    * - Regular attributes: `{"param1": 42, "param2": true}`
    * - Default attributes: `{"default_param": "hello"}`
-   * 
+   *
    * After calling `getParameters(op, rewriter, false)` (or without the third
    * argument):
-   * - The returned ArrayAttr will contain two hw::ParamDeclAttr from the regular
-   * attributes:
-   *   - `hw::ParamDeclAttr::get(StringAttr::get(context, "param1"), i32, IntegerAttr::get(context, 42))`
-   *   - `hw::ParamDeclAttr::get(StringAttr::get(context, "param2"), i1, IntegerAttr::get(context, true))`
-   * 
+   * - The returned ArrayAttr will contain two hw::ParamDeclAttr from the
+   * regular attributes:
+   *   - `hw::ParamDeclAttr::get(StringAttr::get(context, "param1"), i32,
+   * IntegerAttr::get(context, 42))`
+   *   - `hw::ParamDeclAttr::get(StringAttr::get(context, "param2"), i1,
+   * IntegerAttr::get(context, true))`
+   *
    * After calling `getParameters(op, rewriter, true)`:
-   * - The returned ArrayAttr will contain one hw::ParamDeclAttr from the default
-   * attributes:
-   *   - `hw::ParamDeclAttr::get(StringAttr::get(context, "default_param"), string, StringAttr::get(context, "hello"))`
+   * - The returned ArrayAttr will contain one hw::ParamDeclAttr from the
+   * default attributes:
+   *   - `hw::ParamDeclAttr::get(StringAttr::get(context, "default_param"),
+   * string, StringAttr::get(context, "hello"))`
    */
   ArrayAttr getParameters(xlnx::HWInstable op,
-                          ConversionPatternRewriter &rewriter, bool inDefault = false) const {
+                          ConversionPatternRewriter &rewriter,
+                          bool inDefault = false) const {
     SmallVector<Attribute> parameters;
     auto context = rewriter.getContext();
     auto dict = inDefault ? op.getDefaultAttrDict() : op.getAttrDict();
