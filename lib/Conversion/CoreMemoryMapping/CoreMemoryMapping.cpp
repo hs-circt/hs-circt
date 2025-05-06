@@ -1,5 +1,6 @@
 #include "circt/Conversion/CoreMemoryMapping.h"
 #include "circt/Dialect/Comb/CombOps.h"
+#include "circt/Dialect/HW/HWOpInterfaces.h"
 #include "circt/Dialect/HW/HWOps.h"
 #include "circt/Dialect/Seq/SeqOps.h"
 #include "circt/Support/LLVM.h"
@@ -12,6 +13,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cmath>
+#include <optional>
 
 namespace circt {
 #define GEN_PASS_DEF_COREMEMORYMAPPING
@@ -107,23 +109,23 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     auto externmodule =
         builder.create<hw::HWModuleExternOp>(op->getLoc(), moduleName, ports);
     SmallVector<Attribute> params;
-    params.push_back(hw::ParamDeclAttr::get(
+    params.emplace_back(hw::ParamDeclAttr::get(
         builder.getContext(), builder.getStringAttr("READ_WIDTH_A"),
         builder.getIntegerType(32),
         builder.getIntegerAttr(builder.getIntegerType(32), -1)));
-    params.push_back(hw::ParamDeclAttr::get(
+    params.emplace_back(hw::ParamDeclAttr::get(
         builder.getContext(), builder.getStringAttr("WRITE_WIDTH_A"),
         builder.getIntegerType(32),
         builder.getIntegerAttr(builder.getIntegerType(32), -1)));
-    params.push_back(hw::ParamDeclAttr::get(
+    params.emplace_back(hw::ParamDeclAttr::get(
         builder.getContext(), builder.getStringAttr("DOA_REG"),
         builder.getIntegerType(1),
         builder.getIntegerAttr(builder.getIntegerType(1), 1)));
-    params.push_back(hw::ParamDeclAttr::get(
+    params.emplace_back(hw::ParamDeclAttr::get(
         builder.getContext(), builder.getStringAttr("INIT_A"),
         builder.getIntegerType(36),
         builder.getIntegerAttr(builder.getIntegerType(36), 1)));
-    params.push_back(hw::ParamDeclAttr::get(
+    params.emplace_back(hw::ParamDeclAttr::get(
         builder.getContext(), builder.getStringAttr("WRITE_MODE_A"),
         builder.getStringAttr("NONE").getType(),
         builder.getStringAttr("NONE")));
@@ -151,17 +153,19 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     auto constant0_8 = rewriter.create<hw::ConstantOp>(
         op->getLoc(), rewriter.getIntegerType(8),
         rewriter.getIntegerAttr(rewriter.getIntegerType(8), 0));
+    seq::FirMemReadWriteOp tureport;
     for (auto &useop : op->getUses()) {
       if (auto readWriteOp =
               dyn_cast<seq::FirMemReadWriteOp>(useop.getOwner())) {
-        firmemops.push_back(readWriteOp);
+        firmemops.emplace_back(readWriteOp);
         if (portIndex == 0) {
-          symbolInputs.push_back(readWriteOp.getClk());
+          tureport = readWriteOp;
+          symbolInputs.emplace_back(readWriteOp.getClk());
           mlir::Value addra = readWriteOp.getAddress();
           if (portSize > 1) {
             llvm::SmallVector<Value> constantVector;
             for (int i = 0; i < int(log2(portSize)); i++) {
-              constantVector.push_back(constant1);
+              constantVector.emplace_back(constant1);
             }
             addra = rewriter.create<comb::ConcatOp>(op->getLoc(), addra,
                                                     constantVector);
@@ -179,8 +183,8 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
             addra =
                 rewriter.create<comb::ConcatOp>(op->getLoc(), constantVector);
           }
-          symbolInputs.push_back(addra);
-          symbolInputs.push_back(readWriteOp.getEnable());
+          symbolInputs.emplace_back(addra);
+          symbolInputs.emplace_back(readWriteOp.getEnable());
           mlir::Value writeData = readWriteOp.getWriteData();
           mlir::Value extractValue = writeData;
           if (extractSize != -1) {
@@ -316,8 +320,9 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     }
     mlir::Value weaValue = firmemops[0].getOperand(5);
     SmallVector<Value> values = {weaValue, weaValue, weaValue, weaValue};
-    auto concatwea = rewriter.create<comb::ConcatOp>(op->getLoc(), values);
-    symbolInputs.emplace_back(concatwea.getResult()); // wea
+    weaValue = rewriter.create<comb::ConcatOp>(op->getLoc(), values);
+
+    symbolInputs.emplace_back(weaValue); // wea
 
     mlir::Value webValue = constant0_8;
     if (portSize == 2) {
@@ -326,18 +331,19 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
                                    weaValue,  weaValue,  weaValue,  weaValue};
       webValue = rewriter.create<comb::ConcatOp>(op->getLoc(), values);
     } else if (extractSize != -1 && firmemops[0].getMask() != nullptr) {
-      webValue = rewriter.createOrFold<comb::ExtractOp>(
+      weaValue = rewriter.createOrFold<comb::ExtractOp>(
           op->getLoc(), firmemops[0].getMask(), extractSize / 8, portSize / 8);
-      if (webValue.getType().getIntOrFloatBitWidth() < 8) {
+      if (weaValue.getType().getIntOrFloatBitWidth() < 4) {
         llvm::SmallVector<Value> constantVector;
-        for (int i = 0; i < 8 - webValue.getType().getIntOrFloatBitWidth();
+        for (int i = 0; i < 4 - weaValue.getType().getIntOrFloatBitWidth();
              i++) {
           constantVector.emplace_back(constant0);
         }
-        constantVector.emplace_back(webValue);
-        webValue =
+        constantVector.emplace_back(weaValue);
+        weaValue =
             rewriter.create<comb::ConcatOp>(op->getLoc(), constantVector);
       }
+      symbolInputs.back() = weaValue;
     }
     symbolInputs.emplace_back(webValue);
     std::string key = "RAMB36E2";
@@ -355,23 +361,23 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
         symbolInputs);
     {
       SmallVector<Attribute> params;
-      params.push_back(hw::ParamDeclAttr::get(
+      params.emplace_back(hw::ParamDeclAttr::get(
           rewriter.getContext(), rewriter.getStringAttr("READ_WIDTH_A"),
           rewriter.getIntegerType(32),
           rewriter.getIntegerAttr(rewriter.getIntegerType(32), portSize)));
-      params.push_back(hw::ParamDeclAttr::get(
+      params.emplace_back(hw::ParamDeclAttr::get(
           rewriter.getContext(), rewriter.getStringAttr("WRITE_WIDTH_A"),
           rewriter.getIntegerType(32),
           rewriter.getIntegerAttr(rewriter.getIntegerType(32), portSize)));
-      params.push_back(hw::ParamDeclAttr::get(
+      params.emplace_back(hw::ParamDeclAttr::get(
           rewriter.getContext(), rewriter.getStringAttr("DOA_REG"),
           rewriter.getIntegerType(1),
           rewriter.getIntegerAttr(rewriter.getIntegerType(1), 0)));
-      params.push_back(hw::ParamDeclAttr::get(
+      params.emplace_back(hw::ParamDeclAttr::get(
           rewriter.getContext(), rewriter.getStringAttr("INIT_A"),
           rewriter.getIntegerType(36),
           rewriter.getIntegerAttr(rewriter.getIntegerType(36), 0)));
-      params.push_back(hw::ParamDeclAttr::get(
+      params.emplace_back(hw::ParamDeclAttr::get(
           rewriter.getContext(), rewriter.getStringAttr("WRITE_MODE_A"),
           rewriter.getStringAttr("WRITE_FIRST").getType(),
           rewriter.getStringAttr("WRITE_FIRST")));
@@ -379,21 +385,6 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
                           ArrayAttr::get(rewriter.getContext(), params));
     }
     return {instanceop, firmemops[0]};
-  }
-  void setBram(seq::FirMemOp op, OpAdaptor adaptor,
-               ConversionPatternRewriter &rewriter) const {
-    int index = 0;
-    bitSize = op.getType().getWidth();
-    depth = op.getType().getDepth();
-
-    // For small memory and standard sizes, use simple processing logic
-    if (!(bitSize * depth > 36864 || bitSize > 36)) {
-      handleSmallBram(op, adaptor, rewriter, index);
-      return;
-    }
-
-    // Handle large memory and non-standard sizes
-    handleLargeBram(op, adaptor, rewriter, index);
   }
 
   // Handle small BRAM memory
@@ -454,6 +445,52 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     op->erase();
   }
 
+  // Create single BRAM slice
+  void
+  createBramSlice(seq::FirMemOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter, int maxBitsize,
+                  int totalSize, int sliceIndex,
+                  std::vector<mlir::Value> &instValue,
+                  std::vector<std::pair<Operation *, int>> &instUses) const {
+    hw::InstanceOp instanceop;
+    seq::FirMemReadWriteOp readWriteOp;
+    this->portSize = maxBitsize;
+    this->extractSize = sliceIndex * maxBitsize;
+
+    std::tie(instanceop, readWriteOp) = instanceBlockRam(op, adaptor, rewriter);
+
+    // Collect usage information
+    if (instUses.empty()) {
+      for (auto &uses : readWriteOp->getUses()) {
+        instUses.emplace_back(uses.getOwner(), uses.getOperandNumber());
+      }
+    }
+
+    // Create data bits
+    mlir::Value instV =
+        rewriter.create<comb::ExtractOp>(op->getLoc(), instanceop.getResult(0),
+                                         0, std::min(maxBitsize, totalSize));
+    instValue.emplace_back(instV);
+
+    // Create mask bits (if needed)
+    bool needsMask = op.getMemory().getType().getMaskWidth() == std::nullopt &&
+                     (maxBitsize == 9 ||
+                      (maxBitsize > 16 && maxBitsize <= 18) || maxBitsize > 32);
+
+    if (needsMask) {
+      int len = 0;
+      if (maxBitsize == 9)
+        len = 1;
+      else if (maxBitsize > 16 && maxBitsize <= 18)
+        len = maxBitsize - 16;
+      else if (maxBitsize > 32)
+        len = maxBitsize - 32;
+
+      instV = rewriter.create<comb::ExtractOp>(op->getLoc(),
+                                               instanceop.getResult(1), 0, len);
+      instValue.emplace_back(instV);
+    }
+  }
   // Handle large BRAM memory
   void handleLargeBram(seq::FirMemOp op, OpAdaptor adaptor,
                        ConversionPatternRewriter &rewriter, int index) const {
@@ -499,52 +536,20 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     op->erase();
   }
 
-  // Create single BRAM slice
-  void
-  createBramSlice(seq::FirMemOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter, int maxBitsize,
-                  int totalSize, int sliceIndex,
-                  std::vector<mlir::Value> &instValue,
-                  std::vector<std::pair<Operation *, int>> &instUses) const {
-    hw::InstanceOp instanceop;
-    seq::FirMemReadWriteOp readWriteOp;
-    this->portSize = maxBitsize;
-    this->extractSize = sliceIndex * maxBitsize;
+  void setBram(seq::FirMemOp op, OpAdaptor adaptor,
+               ConversionPatternRewriter &rewriter) const {
+    int index = 0;
+    bitSize = op.getType().getWidth();
+    depth = op.getType().getDepth();
 
-    std::tie(instanceop, readWriteOp) = instanceBlockRam(op, adaptor, rewriter);
-
-    // Collect usage information
-    if (instUses.empty()) {
-      for (auto &uses : readWriteOp->getUses()) {
-        instUses.emplace_back(uses.getOwner(), uses.getOperandNumber());
-      }
+    // For small memory and standard sizes, use simple processing logic
+    if (!(bitSize * depth > 36864 || bitSize > 36)) {
+      handleSmallBram(op, adaptor, rewriter, index);
+      return;
     }
 
-    // Create data bits
-    mlir::Value instV =
-        rewriter.create<comb::ExtractOp>(op->getLoc(), instanceop.getResult(0),
-                                         0, std::min(maxBitsize, totalSize));
-    instValue.emplace_back(instV);
-
-    // Create mask bits (if needed)
-    bool needsMask =
-        op.getMemory().getType().getMaskWidth() == std::nullopt &&
-        (maxBitsize == 9 || (maxBitsize > 16 && maxBitsize <= 18) ||
-         maxBitsize >= 32);
-
-    if (needsMask) {
-      int len = 0;
-      if (maxBitsize == 9)
-        len = 1;
-      else if (maxBitsize > 16 && maxBitsize <= 18)
-        len = maxBitsize - 16;
-      else if (maxBitsize >= 32)
-        len = maxBitsize - 32;
-
-      instV = rewriter.create<comb::ExtractOp>(op->getLoc(),
-                                               instanceop.getResult(1), 0, len);
-      instValue.emplace_back(instV);
-    }
+    // Handle large memory and non-standard sizes
+    handleLargeBram(op, adaptor, rewriter, index);
   }
 
   hw::HWModuleExternOp
@@ -712,10 +717,10 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     this->locOp = InstanceOp;
     return InstanceOp;
   }
-  void useX1D(seq::FirMemOp op, OpAdaptor adaptor,
-              ConversionPatternRewriter &rewriter, seq::FirMemReadOp readop,
-              seq::FirMemWriteOp writeop, llvm::SmallVector<Value> &dramResult,
-              int extractIndex) const {
+  hw::InstanceOp useX1D(seq::FirMemOp op, OpAdaptor adaptor,
+                        ConversionPatternRewriter &rewriter,
+                        seq::FirMemReadOp readop, seq::FirMemWriteOp writeop,
+                        int extractIndex) const {
     auto extractOp = rewriter.create<comb::ExtractOp>(
         op->getLoc(), writeop.getData(), extractIndex, 1);
     llvm::SmallVector<Value> symbolInputs;
@@ -746,21 +751,19 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
         symbolInputs.emplace_back(extractop.getResult());
       }
     }
-    auto instanceModule = createInsetance(rewriter, symbolInputs, op);
-    this->locOp = instanceModule;
-    dramResult.emplace_back(instanceModule.getResult(0));
+    return createInsetance(rewriter, symbolInputs, op);
   }
-  void use6bitRAM(seq::FirMemOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter, int extractSize,
-                  seq::FirMemReadOp readOp, seq::FirMemWriteOp writeOp,
-                  llvm::SmallVector<Value> &dramResult) const {
+  hw::InstanceOp use6bitRAM(seq::FirMemOp op, OpAdaptor adaptor,
+                            ConversionPatternRewriter &rewriter,
+                            int extractSize, seq::FirMemReadOp readOp,
+                            seq::FirMemWriteOp writeOp) const {
     auto extractOp0 = rewriter.create<comb::ExtractOp>(
         op->getLoc(), writeOp.getData(), extractSize, 2);
     auto extractOp1 = rewriter.create<comb::ExtractOp>(
         op->getLoc(), writeOp.getData(), extractSize + 2, 2);
     auto extractOp2 = rewriter.create<comb::ExtractOp>(
         op->getLoc(), writeOp.getData(), extractSize + 4, 2);
-    // rewriter.setInsertionPointAfter(extractOp2);
+
     this->locOp = extractOp2;
     llvm::SmallVector<Value> symbolInputs;
     symbolInputs.emplace_back(extractOp0.getResult());
@@ -820,26 +823,23 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
       externOp = create6bitModuleExtern(module, op, rewriter);
       dramMap[this->depth + 1] = externOp;
     }
-    auto instanceModule = rewriter.create<hw::InstanceOp>(
+
+    return rewriter.create<hw::InstanceOp>(
         op->getLoc(), externOp,
         rewriter.getStringAttr("RAM32M_" + std::to_string(moduleNum++)),
         symbolInputs);
-    this->locOp = instanceModule;
-    dramResult.emplace_back(instanceModule.getResult(0));
-    dramResult.emplace_back(instanceModule.getResult(1));
-    dramResult.emplace_back(instanceModule.getResult(2));
   }
-  void use3BitRAM(seq::FirMemOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter, seq::FirMemReadOp readOp,
-                  seq::FirMemWriteOp writeOp,
-                  llvm::SmallVector<Value> &dramResult, int extractSize) const {
+  hw::InstanceOp use3BitRAM(seq::FirMemOp op, OpAdaptor adaptor,
+                            ConversionPatternRewriter &rewriter,
+                            seq::FirMemReadOp readOp,
+                            seq::FirMemWriteOp writeOp, int extractSize) const {
     auto extractOp0 = rewriter.create<comb::ExtractOp>(
         op->getLoc(), writeOp.getData(), extractSize, 1);
     auto extractOp1 = rewriter.create<comb::ExtractOp>(
         op->getLoc(), writeOp.getData(), extractSize + 1, 1);
     auto extractOp2 = rewriter.create<comb::ExtractOp>(
         op->getLoc(), writeOp.getData(), extractSize + 2, 1);
-    // rewriter.setInsertionPointAfter(extractOp2);
+
     this->locOp = extractOp2;
     llvm::SmallVector<Value> symbolInputs;
     symbolInputs.emplace_back(extractOp0.getResult());
@@ -898,14 +898,12 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
       externOp = create3bitModuleExtern(module, op, rewriter);
       dramMap[this->depth + 1] = externOp;
     }
-    auto instanceModule = rewriter.create<hw::InstanceOp>(
+
+    return rewriter.create<hw::InstanceOp>(
         op->getLoc(), externOp,
         rewriter.getStringAttr("RAM32M_" + std::to_string(moduleNum++)),
         symbolInputs);
-    this->locOp = instanceModule;
-    dramResult.emplace_back(instanceModule.getResult(0));
-    dramResult.emplace_back(instanceModule.getResult(1));
-    dramResult.emplace_back(instanceModule.getResult(2));
+    ;
   }
   void setDistRam(seq::FirMemOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter, int depth) const {
@@ -916,14 +914,15 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     this->bitSize = op.getType().getWidth();
     this->depth = depthArray[depthIndex];
     this->locOp = op;
+
     seq::FirMemReadOp readOp = nullptr;
     seq::FirMemWriteOp writeOp = nullptr;
     for (auto &useop : op->getUses()) {
-      if (auto readop1 = llvm::dyn_cast<seq::FirMemReadOp>(useop.getOwner())) {
-        readOp = readop1;
-      } else if (auto writeop1 =
+      if (auto readop = llvm::dyn_cast<seq::FirMemReadOp>(useop.getOwner())) {
+        readOp = readop;
+      } else if (auto writeop =
                      llvm::dyn_cast<seq::FirMemWriteOp>(useop.getOwner())) {
-        writeOp = writeop1;
+        writeOp = writeop;
       } else {
         assert(
             false &&
@@ -934,12 +933,24 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     llvm::SmallVector<Value> dramResult;
     for (int i = 0; i < op.getType().getWidth(); i++) {
       if ((bitSize <= 12 || bitSize - i < 6) || depth > 64) {
-        useX1D(op, adaptor, rewriter, readOp, writeOp, dramResult, i);
+        hw::InstanceOp inst = useX1D(op, adaptor, rewriter, readOp, writeOp, i);
+        this->locOp = inst;
+        dramResult.emplace_back(inst.getResult(0));
       } else if (depth <= 32) {
-        use6bitRAM(op, adaptor, rewriter, i, readOp, writeOp, dramResult);
+        hw::InstanceOp inst =
+            use6bitRAM(op, adaptor, rewriter, i, readOp, writeOp);
+        this->locOp = inst;
+        dramResult.emplace_back(inst.getResult(0));
+        dramResult.emplace_back(inst.getResult(1));
+        dramResult.emplace_back(inst.getResult(2));
         i += 5;
       } else if (depth <= 64) {
-        use3BitRAM(op, adaptor, rewriter, readOp, writeOp, dramResult, i);
+        hw::InstanceOp inst =
+            use3BitRAM(op, adaptor, rewriter, readOp, writeOp, i);
+        this->locOp = inst;
+        dramResult.emplace_back(inst.getResult(0));
+        dramResult.emplace_back(inst.getResult(1));
+        dramResult.emplace_back(inst.getResult(2));
         i += 2;
       }
     }
@@ -975,7 +986,6 @@ private:
   mutable llvm::StringMap<hw::HWModuleExternOp> moduleGeneratedMap;
   mutable llvm::DenseMap<int, hw::HWModuleExternOp> dramMap;
   mutable llvm::SmallVector<hw::InstanceOp> dramInstance;
-  // mutable llvm::SmallVector<mlir::Value> dramResult;
   int portSizeArray[6] = {1, 2, 4, 9, 18, 36};
   int depthArray[4] = {32, 64, 128, 256};
   mutable ModuleOp module;
@@ -990,7 +1000,6 @@ void firMemOpConversion(RewritePatternSet &patterns) {
 void CoreMemoryMappingPass::runOnOperation() {
   MLIRContext &context = getContext();
   ModuleOp module = getOperation();
-  // llvm::SmallVector<seq::FirMemOp> firMemOps = analyseFirMem(module);
   OpBuilder builder(&context);
   IRRewriter rewriter(&context);
   ConversionTarget target(context);
