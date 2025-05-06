@@ -865,12 +865,12 @@ def ConvertAIGToComb: Pass<"convert-aig-to-comb", "hw::HWModuleOp"> {
 // Comb/HW/Seq to Xlnx
 //===----------------------------------------------------------------------===//
 
-def ConvertCoreToXlnx : Pass<"convert-core-to-xlnx", "mlir::ModuleOp"> {
+def ConvertSeqToXlnx : Pass<"convert-seq-to-xlnx", "mlir::ModuleOp"> {
   let summary = "Convert Core to Xlnx";
   let description = [{
     This pass translates Core to Xlnx.
   }];
-  let constructor = "circt::createConvertCoreToXlnxPass()";
+  let constructor = "circt::createConvertSeqToXlnxPass()";
   let dependentDialects = [
     "circt::hw::HWDialect",
     "circt::seq::SeqDialect",

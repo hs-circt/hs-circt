@@ -90,7 +90,7 @@ mkdir $WORK_DIR
 circt-opt "$MLIR_FILE" --convert-xlnx-to-hw --lower-seq-to-sv | firtool -format mlir | sed "s/\b${MODULE_NAME}\b/GoldenTop/g" > $WORK_DIR/golden.sv
 
 # Generate under test module
-circt-opt "$MLIR_FILE" --convert-core-to-xlnx --convert-xlnx-to-hw --split-input-file --verify-diagnostics | firtool -format=mlir | sed "s/\b${MODULE_NAME}\b/CheckTop/g" > $WORK_DIR/under_test.sv
+circt-opt "$MLIR_FILE" --convert-seq-to-xlnx --convert-xlnx-to-hw --split-input-file --verify-diagnostics | firtool -format=mlir | sed "s/\b${MODULE_NAME}\b/CheckTop/g" > $WORK_DIR/under_test.sv
 
 # Run difference test
 pushd $WORK_DIR

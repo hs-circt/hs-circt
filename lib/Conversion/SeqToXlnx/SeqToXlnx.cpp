@@ -1,4 +1,4 @@
-//===- CoreToXlnx.cpp - Core to Xlnx Conversion Pass ----------------------===//
+//===- SeqToXlnx.cpp - Core to Xlnx Conversion Pass ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "circt/Conversion/CoreToXlnx.h"
+#include "circt/Conversion/SeqToXlnx.h"
 #include "circt/Dialect/Comb/CombOps.h"
 #include "circt/Dialect/HW/HWOps.h"
 #include "circt/Dialect/Seq/SeqOps.h"
@@ -21,7 +21,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace circt {
-#define GEN_PASS_DEF_CONVERTCORETOXLNX
+#define GEN_PASS_DEF_CONVERTSEQTOXLNX
 #include "circt/Conversion/Passes.h.inc"
 } // namespace circt
 
@@ -583,18 +583,18 @@ struct CompRegCELowering
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// CoreToXlnxPass
+// SeqToXlnxPass
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct CoreToXlnxPass
-    : public circt::impl::ConvertCoreToXlnxBase<CoreToXlnxPass> {
+struct SeqToXlnxPass
+    : public circt::impl::ConvertSeqToXlnxBase<SeqToXlnxPass> {
   void runOnOperation() override;
 };
 } // namespace
 
 /**
- * @brief Configures the legality rules for the CoreToXlnx conversion.
+ * @brief Configures the legality rules for the SeqToXlnx conversion.
  *
  * This function defines which operations are legal after the conversion and which must be converted:
  * - Marks `seq::CompRegOp` and `seq::CompRegClockEnabledOp` as illegal.
@@ -627,7 +627,7 @@ static void populateLegality(ConversionTarget &target) {
 /**
  * @brief Populates the pattern set with operation conversion patterns.
  *
- * Populates the given pattern set with the operation conversion patterns required for the CoreToXlnx conversion.
+ * Populates the given pattern set with the operation conversion patterns required for the SeqToXlnx conversion.
  * Specifically, it adds the patterns responsible for the actual operation conversion
  * (`CompRegLowering` and `CompRegCELowering`) to the `patterns` set. These patterns
  * will be used during `applyPartialConversion` to match and rewrite the corresponding
@@ -651,7 +651,7 @@ static void populateOpConversion(RewritePatternSet &patterns) {
  * 6. Applies the conversion using `applyPartialConversion`.
  * 7. Signals pass failure if the conversion fails.
  */
-void CoreToXlnxPass::runOnOperation() {
+void SeqToXlnxPass::runOnOperation() {
   MLIRContext &context = getContext();
   ModuleOp module = getOperation();
 
@@ -668,11 +668,11 @@ void CoreToXlnxPass::runOnOperation() {
 }
 
 /**
- * @brief Creates an instance of the CoreToXlnx conversion pass.
+ * @brief Creates an instance of the SeqToXlnx conversion pass.
  *
  * This is the factory function used for registering and creating the pass.
- * @return A unique pointer (`std::unique_ptr`) to the newly created `CoreToXlnxPass` instance.
+ * @return A unique pointer (`std::unique_ptr`) to the newly created `SeqToXlnxPass` instance.
  */
-std::unique_ptr<OperationPass<ModuleOp>> circt::createConvertCoreToXlnxPass() {
-  return std::make_unique<CoreToXlnxPass>();
+std::unique_ptr<OperationPass<ModuleOp>> circt::createConvertSeqToXlnxPass() {
+  return std::make_unique<SeqToXlnxPass>();
 }

@@ -1,4 +1,4 @@
-//===- CoreToXlnx.h - Core to Xlnx Conversion Pass -------------*- C++ -*-===//
+//===- SeqToXlnx.h - Core to Xlnx Conversion Pass -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CIRCT_CONVERSION_CORETOXLNX_CORETOXLNX_H
-#define CIRCT_CONVERSION_CORETOXLNX_CORETOXLNX_H
+#ifndef CIRCT_CONVERSION_SEQTOXLNX_SEQTOXLNX_H
+#define CIRCT_CONVERSION_SEQTOXLNX_SEQTOXLNX_H
 
 #include "circt/Support/LLVM.h"
 #include <memory>
@@ -25,11 +25,11 @@ namespace circt {
 
 /// Creates a pass that converts Core dialect operations (Seq, Comb, HW)
 /// to the Xlnx dialect.
-#define GEN_PASS_DECL_CORETOXLNX
+#define GEN_PASS_DECL_SEQTOXLNX
 #include "circt/Conversion/Passes.h.inc"
 
-std::unique_ptr<OperationPass<ModuleOp>> createConvertCoreToXlnxPass();
+std::unique_ptr<OperationPass<ModuleOp>> createConvertSeqToXlnxPass();
 
 } // namespace circt
 
-#endif // CIRCT_CONVERSION_CORETOXLNX_CORETOXLNX_H 
+#endif // CIRCT_CONVERSION_SEQTOXLNX_SEQTOXLNX_H 

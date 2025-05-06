@@ -1,4 +1,4 @@
-// RUN: circt-opt %s --convert-core-to-xlnx --split-input-file --verify-diagnostics | FileCheck %s
+// RUN: circt-opt %s --convert-seq-to-xlnx --split-input-file --verify-diagnostics | FileCheck %s
 
 module {
   // CHECK-LABEL: hw.module @DoubleReg

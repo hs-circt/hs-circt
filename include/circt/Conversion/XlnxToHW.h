@@ -1,4 +1,4 @@
-//===- CoreToXlnx.h - Core to Xlnx Conversion Pass -------------*- C++ -*-===//
+//===- XlnxToHW.h - Xlnx to HW Conversion Pass -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

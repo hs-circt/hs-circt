@@ -1,5 +1,5 @@
-add_circt_conversion_library(CIRCTCoreToXlnx
-  CoreToXlnx.cpp
+add_circt_conversion_library(CIRCTSeqToXlnx
+  SeqToXlnx.cpp
 
   DEPENDS
   CIRCTConversionPassIncGen
