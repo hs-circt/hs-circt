@@ -903,7 +903,7 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
         op->getLoc(), externOp,
         rewriter.getStringAttr("RAM32M_" + std::to_string(moduleNum++)),
         symbolInputs);
-    ;
+    
   }
   void setDistRam(seq::FirMemOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter, int depth) const {
@@ -1010,5 +1010,4 @@ void CoreMemoryMappingPass::runOnOperation() {
   firMemOpConversion(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))
     signalPassFailure();
-  module.dump();
 }
