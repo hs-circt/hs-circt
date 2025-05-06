@@ -18,7 +18,23 @@
 // clang-format on
 
 namespace circt {
-namespace xlnx {} // end namespace xlnx
+namespace xlnx {
+
+template <typename ConcreteType>
+class AsynchronousControl
+    : public mlir::OpTrait::TraitBase<ConcreteType, AsynchronousControl> {
+public:
+  static LogicalResult verifyTrait(Operation *op) { return mlir::success(); }
+};
+
+template <typename ConcreteType>
+class SynchronousControl
+    : public mlir::OpTrait::TraitBase<ConcreteType, SynchronousControl> {
+public:
+  static LogicalResult verifyTrait(Operation *op) { return mlir::success(); }
+};
+
+} // end namespace xlnx
 } // end namespace circt
 
 #endif // CIRCT_DIALECT_XLNX_TYPES_H

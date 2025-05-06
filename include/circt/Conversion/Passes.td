@@ -861,5 +861,35 @@ def ConvertAIGToComb: Pass<"convert-aig-to-comb", "hw::HWModuleOp"> {
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// Comb/HW/Seq to Xlnx
+//===----------------------------------------------------------------------===//
+
+def ConvertSeqToXlnx : Pass<"convert-seq-to-xlnx", "mlir::ModuleOp"> {
+  let summary = "Convert Core to Xlnx";
+  let description = [{
+    This pass translates Core to Xlnx.
+  }];
+  let constructor = "circt::createConvertSeqToXlnxPass()";
+  let dependentDialects = [
+    "circt::hw::HWDialect",
+    "circt::seq::SeqDialect",
+    "circt::xlnx::XlnxDialect",
+    "circt::comb::CombDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertXlnxToHW
+//===----------------------------------------------------------------------===//
+
+def ConvertXlnxToHW : Pass<"convert-xlnx-to-hw", "mlir::ModuleOp"> {
+  let summary = "Convert Xlnx to HW";
+  let description = [{
+    This pass translates Xlnx to HW.
+  }];
+  let constructor = "circt::createConvertXlnxToHWPass()";
+  let dependentDialects = ["hw::HWDialect", "xlnx::XlnxDialect"];
+}
 
 #endif // CIRCT_CONVERSION_PASSES_TD

@@ -21,6 +21,8 @@
 
 #define GET_OP_CLASSES
 #include "circt/Dialect/Xlnx/XlnxOpInterfaces.h.inc"
+#define GET_OP_CLASSES
+#include "circt/Dialect/Xlnx/XlnxOps.h.inc"
 #include "circt/Dialect/Xlnx/Xlnx.h.inc"
 // clang-format on
 
