@@ -10,11 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "circt/Conversion/HWToNetlist.h"
+#include "circt/Conversion/CombToNetlist.h"
 #include "circt/Dialect/Comb/CombOps.h"
 #include "circt/Dialect/HW/HWOps.h"
-#include "circt/Dialect/SV/SVOps.h"
-#include "circt/Dialect/Seq/SeqOps.h"
 #include "circt/Dialect/Xlnx/XlnxOps.h"
 #include "circt/Synthesis/CombToNetlist.h"
 #include "mlir/Pass/Pass.h"
@@ -26,20 +24,10 @@
 #include "mockturtle/algorithms/aig_balancing.hpp"
 #include "mockturtle/algorithms/lut_mapper.hpp"
 #include "mockturtle/generators/arithmetic.hpp"
-#include "mockturtle/io/aiger_reader.hpp"
-#include "mockturtle/io/genlib_reader.hpp"
-#include "mockturtle/io/write_blif.hpp"
-#include "mockturtle/io/write_verilog.hpp"
 #include "mockturtle/networks/aig.hpp"
-#include "mockturtle/networks/block.hpp"
-#include "mockturtle/utils/name_utils.hpp"
-#include "mockturtle/utils/tech_library.hpp"
-#include "mockturtle/views/cell_view.hpp"
-#include "mockturtle/views/depth_view.hpp"
-#include "mockturtle/views/names_view.hpp"
 
 namespace circt {
-#define GEN_PASS_DEF_LOWERHWTONETLIST
+#define GEN_PASS_DEF_LOWERCOMBTONETLIST
 #include "circt/Conversion/Passes.h.inc"
 } // namespace circt
 
@@ -375,9 +363,8 @@ LogicalResult CombBlockConverter::combToLut(mapper::MapperAlgoBase &mapper) {
 using namespace circt::synthesis;
 
 namespace {
-
-struct HWToNetlistPass
-    : public circt::impl::LowerHWToNetlistBase<HWToNetlistPass> {
+struct CombToNetlistPass
+    : public circt::impl::LowerCombToNetlistBase<CombToNetlistPass> {
   void runOnOperation() override;
 };
 
@@ -393,7 +380,7 @@ static void populateLegality(ConversionTarget &target) {
   // target.addLegalOp<comb::TruthTableOp>();
 }
 
-void HWToNetlistPass::runOnOperation() {
+void CombToNetlistPass::runOnOperation() {
   MLIRContext &context = getContext();
   hw::HWModuleOp module = getOperation();
   OpBuilder builder(module);
@@ -413,6 +400,6 @@ void HWToNetlistPass::runOnOperation() {
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<OperationPass<hw::HWModuleOp>>
-circt::createLowerHWToNetlistPass() {
-  return std::make_unique<HWToNetlistPass>();
+circt::createLowerCombToNetlistPass() {
+  return std::make_unique<CombToNetlistPass>();
 }

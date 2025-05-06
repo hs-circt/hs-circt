@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "circt/Conversion/HWToNetlist.h"
+#include "circt/Conversion/CombToNetlist.h"
 #include "circt/Synthesis/CombToNetlist.h"
 
 #include "circt/Dialect/Comb/CombDialect.h"

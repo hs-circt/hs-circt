@@ -8,7 +8,7 @@ target_link_libraries(CIRCTSynthesisTests
   CIRCTComb
   CIRCTXlnx
   CIRCTSeq
-  CIRCTHWToNetlist
+  CIRCTCombToNetlist
   
   mockturtle
 )
