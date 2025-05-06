@@ -51,20 +51,19 @@ public:
   std::pair<hw::InstanceOp, seq::FirMemReadWriteOp>
   instanceBlockRam(seq::FirMemOp op, ConversionPatternRewriter &rewriter,
                    int portSize, int extractSize,
-                   hw::HWModuleExternOp &RAMB36E2) {
+                   hw::HWModuleExternOp &blockRam) {
     llvm::SmallVector<mlir::Value> symbolInputs;
     llvm::SmallVector<seq::FirMemReadWriteOp> firmemops;
-    hw::InstanceOp instanceOp = nullptr;
-    auto context = op->getContext();
+    auto *context = op->getContext();
     int portIndex = 0;
     auto constant1 = rewriter.create<circt::hw::ConstantOp>(
         op->getLoc(), rewriter.getI1Type(), rewriter.getBoolAttr(true));
     auto constant0 = rewriter.create<circt::hw::ConstantOp>(
         op->getLoc(), rewriter.getI1Type(), rewriter.getBoolAttr(false));
-    auto constant0_4 = rewriter.create<hw::ConstantOp>(
+    auto constant04 = rewriter.create<hw::ConstantOp>(
         op->getLoc(), rewriter.getIntegerType(4),
         rewriter.getIntegerAttr(rewriter.getIntegerType(4), 0));
-    auto constant0_8 = rewriter.create<hw::ConstantOp>(
+    auto constant08 = rewriter.create<hw::ConstantOp>(
         op->getLoc(), rewriter.getIntegerType(8),
         rewriter.getIntegerAttr(rewriter.getIntegerType(8), 0));
     seq::FirMemReadWriteOp tureport;
@@ -89,7 +88,9 @@ public:
           }
           if (addra.getType().getIntOrFloatBitWidth() < 15) {
             llvm::SmallVector<Value> constantVector;
-            for (int i = 0; i < 15 - addra.getType().getIntOrFloatBitWidth();
+            for (int i = 0;
+                 i <
+                 15 - static_cast<int>(addra.getType().getIntOrFloatBitWidth());
                  i++) {
               constantVector.emplace_back(constant0);
             }
@@ -112,7 +113,9 @@ public:
           if (extractValue.getType().getIntOrFloatBitWidth() < 32) {
             llvm::SmallVector<Value> constantVector;
             for (int i = 0;
-                 i < 32 - extractValue.getType().getIntOrFloatBitWidth(); i++) {
+                 i < 32 - static_cast<int>(
+                              extractValue.getType().getIntOrFloatBitWidth());
+                 i++) {
               constantVector.emplace_back(constant0);
             }
             constantVector.emplace_back(extractValue);
@@ -123,7 +126,7 @@ public:
                                                          extractValue, 0, 32);
           }
           symbolInputs.emplace_back(writeData);
-          mlir::Value dipadi = constant0_4;
+          mlir::Value dipadi = constant04;
           if ((bitSize > 32 || (bitSize > 16 && bitSize <= 18) ||
                bitSize == 9) &&
               readWriteOp.getMask() == nullptr) {
@@ -135,7 +138,9 @@ public:
                         extractValue.getType().getIntOrFloatBitWidth() - 32)));
             if (dipadi.getType().getIntOrFloatBitWidth() != 4) {
               llvm::SmallVector<Value> constantVector;
-              for (int i = 0; i < 4 - dipadi.getType().getIntOrFloatBitWidth();
+              for (int i = 0;
+                   i < 4 - static_cast<int>(
+                               dipadi.getType().getIntOrFloatBitWidth());
                    i++) {
                 constantVector.emplace_back(constant0);
               }
@@ -162,7 +167,9 @@ public:
           }
           if (addrb.getType().getIntOrFloatBitWidth() < 15) {
             llvm::SmallVector<Value> constantVector;
-            for (int i = 0; i < 15 - addrb.getType().getIntOrFloatBitWidth();
+            for (int i = 0;
+                 i <
+                 15 - static_cast<int>(addrb.getType().getIntOrFloatBitWidth());
                  i++) {
               constantVector.emplace_back(constant0);
             }
@@ -185,7 +192,9 @@ public:
           if (extractValue.getType().getIntOrFloatBitWidth() < 32) {
             llvm::SmallVector<Value> constantVector;
             for (int i = 0;
-                 i < 32 - extractValue.getType().getIntOrFloatBitWidth(); i++) {
+                 i < 32 - static_cast<int>(
+                              extractValue.getType().getIntOrFloatBitWidth());
+                 i++) {
               constantVector.emplace_back(constant0);
             }
             constantVector.emplace_back(extractValue);
@@ -198,7 +207,7 @@ public:
           }
 
           symbolInputs.emplace_back(writeData);
-          mlir::Value dipadi = constant0_4;
+          mlir::Value dipadi = constant04;
           if ((bitSize > 32 || (bitSize > 16 && bitSize <= 18) ||
                bitSize == 9) &&
               readWriteOp.getMask() == nullptr) {
@@ -215,22 +224,22 @@ public:
       }
     }
     if (portIndex == 1) {
-      auto constant0_15 = rewriter.create<hw::ConstantOp>(
+      auto constant015 = rewriter.create<hw::ConstantOp>(
           op->getLoc(), rewriter.getIntegerType(15),
           rewriter.getIntegerAttr(rewriter.getIntegerType(15), 0));
-      auto constant0_32 = rewriter.create<hw::ConstantOp>(
+      auto constant032 = rewriter.create<hw::ConstantOp>(
           op->getLoc(), rewriter.getIntegerType(32),
           rewriter.getIntegerAttr(rewriter.getIntegerType(32), 0));
-      auto constant0_clk =
+      auto constant0clk =
           rewriter.create<seq::ToClockOp>(op->getLoc(), constant0);
-      symbolInputs.emplace_back(constant0_clk); // clkbwrclk
-      symbolInputs.emplace_back(constant0_15);  // addrb
-      symbolInputs.emplace_back(constant0);     // enb
-      symbolInputs.emplace_back(constant0_32);  // dinbdin
-      symbolInputs.emplace_back(constant0_4);   // dinpbdin
-      symbolInputs.emplace_back(constant0);     // RSTRAMARSTRAM
-      symbolInputs.emplace_back(constant0);     // RSTREGARSTREG
-      symbolInputs.emplace_back(constant1);     // REGCEAREGCE
+      symbolInputs.emplace_back(constant0clk); // clkbwrclk
+      symbolInputs.emplace_back(constant015);  // addrb
+      symbolInputs.emplace_back(constant0);    // enb
+      symbolInputs.emplace_back(constant032);  // dinbdin
+      symbolInputs.emplace_back(constant04);   // dinpbdin
+      symbolInputs.emplace_back(constant0);    // RSTRAMARSTRAM
+      symbolInputs.emplace_back(constant0);    // RSTREGARSTREG
+      symbolInputs.emplace_back(constant1);    // REGCEAREGCE
     }
     mlir::Value weaValue = firmemops[0].getOperand(5);
     SmallVector<Value> values = {weaValue, weaValue, weaValue, weaValue};
@@ -238,7 +247,7 @@ public:
 
     symbolInputs.emplace_back(weaValue); // wea
 
-    mlir::Value webValue = constant0_8;
+    mlir::Value webValue = constant08;
     if (portSize == 2) {
       webValue = firmemops[1].getOperand(5);
       SmallVector<Value> values = {constant0, constant0, constant0, constant0,
@@ -249,7 +258,8 @@ public:
           op->getLoc(), firmemops[0].getMask(), extractSize / 8, portSize / 8);
       if (weaValue.getType().getIntOrFloatBitWidth() < 4) {
         llvm::SmallVector<Value> constantVector;
-        for (int i = 0; i < 4 - weaValue.getType().getIntOrFloatBitWidth();
+        for (int i = 0; i < 4 - static_cast<int>(
+                                    weaValue.getType().getIntOrFloatBitWidth());
              i++) {
           constantVector.emplace_back(constant0);
         }
@@ -260,10 +270,10 @@ public:
       symbolInputs.back() = weaValue;
     }
     symbolInputs.emplace_back(webValue);
-    if (RAMB36E2 == nullptr) {
-      RAMB36E2 = createModuleExtern(module, *context, moduleNum++, portSize);
+    if (blockRam == nullptr) {
+      blockRam = createModuleExtern(module, *context, moduleNum++, portSize);
     }
-    auto &externModule = RAMB36E2;
+    auto &externModule = blockRam;
     auto instanceop = rewriter.create<hw::InstanceOp>(
         op.getLoc(), externModule,
         rewriter.getStringAttr("RAMB36E2_" + std::to_string(moduleNum++)),
@@ -296,7 +306,7 @@ public:
     return {instanceop, firmemops[0]};
   }
 
-  void InstanceDistRam(int bitSize, int &place, seq::FirMemReadOp readOp,
+  void instanceDistRam(int bitSize, int &place, seq::FirMemReadOp readOp,
                        seq::FirMemWriteOp writeOp, seq::FirMemOp op,
                        ConversionPatternRewriter &rewriter,
                        llvm::DenseMap<int, hw::HWModuleExternOp> &dramMap) {
@@ -326,8 +336,8 @@ public:
 
   llvm::SmallVector<Value> getDramResult() { return dramResult; }
   ~CreateInstance() = default;
+
 private:
-  
   hw::HWModuleExternOp
   createX1DModuleExtern(ModuleOp module, seq::FirMemOp op,
                         ConversionPatternRewriter &rewriter) {
@@ -336,31 +346,31 @@ private:
     StringAttr moduleName =
         rewriter.getStringAttr("RAM" + std::to_string(this->depth) + "X1D");
     int logdepth = std::log2(depth);
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("WCLK"),
-                                    seq::ClockType::get(rewriter.getContext()),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("D"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("WE"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("WCLK"),
+                                     seq::ClockType::get(rewriter.getContext()),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("D"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("WE"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Input}});
     for (int i = 0; i < logdepth; i++) {
       ports.emplace_back(hw::PortInfo{
-          rewriter.getStringAttr("A" + std::to_string(i)),
-          rewriter.getIntegerType(1), hw::ModulePort::Direction::Input});
+          {rewriter.getStringAttr("A" + std::to_string(i)),
+           rewriter.getIntegerType(1), hw::ModulePort::Direction::Input}});
     }
     for (int i = 0; i < logdepth; i++) {
       ports.emplace_back(hw::PortInfo{
-          rewriter.getStringAttr("DPRA" + std::to_string(i)),
-          rewriter.getIntegerType(1), hw::ModulePort::Direction::Input});
+          {rewriter.getStringAttr("DPRA" + std::to_string(i)),
+           rewriter.getIntegerType(1), hw::ModulePort::Direction::Input}});
     }
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DPO"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("SPO"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Output});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DPO"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Output}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("SPO"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Output}});
     auto externmodule =
         rewriter.create<hw::HWModuleExternOp>(op->getLoc(), moduleName, ports);
     rewriter.setInsertionPointAfter(this->locOp);
@@ -374,48 +384,48 @@ private:
     rewriter.setInsertionPointToStart(module.getBody());
     SmallVector<hw::PortInfo> ports;
     StringAttr moduleName = rewriter.getStringAttr("RAM32M");
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DIA"),
-                                    rewriter.getIntegerType(2),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DIB"),
-                                    rewriter.getIntegerType(2),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DIC"),
-                                    rewriter.getIntegerType(2),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DID"),
-                                    rewriter.getIntegerType(2),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("ADDRA"),
-                                    rewriter.getIntegerType(5),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("ADDRB"),
-                                    rewriter.getIntegerType(5),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("ADDRC"),
-                                    rewriter.getIntegerType(5),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("ADDRD"),
-                                    rewriter.getIntegerType(5),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("WE"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("WCLK"),
-                                    seq::ClockType::get(rewriter.getContext()),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DOA"),
-                                    rewriter.getIntegerType(2),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DOB"),
-                                    rewriter.getIntegerType(2),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DOC"),
-                                    rewriter.getIntegerType(2),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DOD"),
-                                    rewriter.getIntegerType(2),
-                                    hw::ModulePort::Direction::Output});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DIA"), rewriter.getIntegerType(2),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DIB"), rewriter.getIntegerType(2),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DIC"), rewriter.getIntegerType(2),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DID"), rewriter.getIntegerType(2),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("ADDRA"),
+                                     rewriter.getIntegerType(5),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("ADDRB"),
+                                     rewriter.getIntegerType(5),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("ADDRC"),
+                                     rewriter.getIntegerType(5),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("ADDRD"),
+                                     rewriter.getIntegerType(5),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("WE"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("WCLK"),
+                                     seq::ClockType::get(rewriter.getContext()),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DOA"), rewriter.getIntegerType(2),
+                      hw::ModulePort::Direction::Output}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DOB"), rewriter.getIntegerType(2),
+                      hw::ModulePort::Direction::Output}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DOC"), rewriter.getIntegerType(2),
+                      hw::ModulePort::Direction::Output}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DOD"), rewriter.getIntegerType(2),
+                      hw::ModulePort::Direction::Output}});
     auto externmodule =
         rewriter.create<hw::HWModuleExternOp>(op->getLoc(), moduleName, ports);
     rewriter.setInsertionPointAfter(this->locOp);
@@ -428,48 +438,48 @@ private:
     rewriter.setInsertionPointToStart(module.getBody());
     SmallVector<hw::PortInfo> ports;
     StringAttr moduleName = rewriter.getStringAttr("RAM64M");
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DIA"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DIB"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DIC"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DID"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("ADDRA"),
-                                    rewriter.getIntegerType(6),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("ADDRB"),
-                                    rewriter.getIntegerType(6),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("ADDRC"),
-                                    rewriter.getIntegerType(6),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("ADDRD"),
-                                    rewriter.getIntegerType(6),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("WE"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("WCLK"),
-                                    seq::ClockType::get(rewriter.getContext()),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DOA"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DOB"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DOC"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{rewriter.getStringAttr("DOD"),
-                                    rewriter.getIntegerType(1),
-                                    hw::ModulePort::Direction::Output});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DIA"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DIB"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DIC"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DID"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("ADDRA"),
+                                     rewriter.getIntegerType(6),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("ADDRB"),
+                                     rewriter.getIntegerType(6),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("ADDRC"),
+                                     rewriter.getIntegerType(6),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("ADDRD"),
+                                     rewriter.getIntegerType(6),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("WE"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{rewriter.getStringAttr("WCLK"),
+                                     seq::ClockType::get(rewriter.getContext()),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DOA"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Output}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DOB"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Output}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DOC"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Output}});
+    ports.emplace_back(
+        hw::PortInfo{{rewriter.getStringAttr("DOD"), rewriter.getIntegerType(1),
+                      hw::ModulePort::Direction::Output}});
     auto externmodule =
         rewriter.create<hw::HWModuleExternOp>(op->getLoc(), moduleName, ports);
     rewriter.setInsertionPointAfter(this->locOp);
@@ -484,13 +494,13 @@ private:
       dramMap[depth] = exrernOp;
     }
 
-    auto InstanceOp = rewriter.create<hw::InstanceOp>(
+    auto instanceOp = rewriter.create<hw::InstanceOp>(
         op->getLoc(), exrernOp,
         rewriter.getStringAttr("RAM" + std::to_string(this->depth) + "X1D_" +
                                std::to_string(moduleNum++)),
         symbolInputs);
-    this->locOp = InstanceOp;
-    return InstanceOp;
+    this->locOp = instanceOp;
+    return instanceOp;
   }
 
   hw::InstanceOp useX1D(seq::FirMemOp op, ConversionPatternRewriter &rewriter,
@@ -507,7 +517,7 @@ private:
     auto constant0 =
         rewriter.create<hw::ConstantOp>(op->getLoc(), rewriter.getI1Type(), 0);
     for (int i = 0; i < int(log2(depth)); i++) {
-      if (wraddr.getType().getIntOrFloatBitWidth() <= i) {
+      if (static_cast<int>(wraddr.getType().getIntOrFloatBitWidth()) <= i) {
         symbolInputs.emplace_back(constant0);
       } else {
         auto extractop =
@@ -517,7 +527,7 @@ private:
     }
     mlir::Value rdaddr = readop.getAddress();
     for (int i = 0; i < int(log2(depth)); i++) {
-      if (rdaddr.getType().getIntOrFloatBitWidth() <= i) {
+      if (static_cast<int>(rdaddr.getType().getIntOrFloatBitWidth()) <= i) {
         symbolInputs.emplace_back(constant0);
       } else {
         auto extractop =
@@ -544,43 +554,47 @@ private:
     symbolInputs.emplace_back(extractOp0.getResult());
     symbolInputs.emplace_back(extractOp1.getResult());
     symbolInputs.emplace_back(extractOp2.getResult());
-    auto constant0_2 = rewriter.create<hw::ConstantOp>(
+    auto constant02 = rewriter.create<hw::ConstantOp>(
         op->getLoc(), rewriter.getIntegerType(2),
         rewriter.getIntegerAttr(rewriter.getIntegerType(2), 0));
     auto constant0 = rewriter.create<hw::ConstantOp>(
         op->getLoc(), rewriter.getIntegerType(1),
         rewriter.getIntegerAttr(rewriter.getIntegerType(1), 0));
-    symbolInputs.emplace_back(constant0_2);
+    symbolInputs.emplace_back(constant02);
 
     mlir::Value rdaddr = readOp.getAddress();
     mlir::Value wraddr = writeOp.getAddress();
-    if (rdaddr.getType().getIntOrFloatBitWidth() < int(log2(this->depth))) {
+    if (static_cast<int>(rdaddr.getType().getIntOrFloatBitWidth()) <
+        int(log2(this->depth))) {
       llvm::SmallVector<mlir::Value> constantVec;
-      for (int i = 0; i < int(log2(this->depth)) -
-                              rdaddr.getType().getIntOrFloatBitWidth();
+      for (int i = 0;
+           i < int(log2(this->depth)) -
+                   static_cast<int>(rdaddr.getType().getIntOrFloatBitWidth());
            i++) {
         constantVec.emplace_back(constant0);
       }
       constantVec.emplace_back(rdaddr);
       rdaddr = rewriter.create<comb::ConcatOp>(op->getLoc(), constantVec);
       this->locOp = rdaddr.getDefiningOp();
-    } else if (rdaddr.getType().getIntOrFloatBitWidth() >
+    } else if (static_cast<int>(rdaddr.getType().getIntOrFloatBitWidth()) >
                int(log2(this->depth))) {
       rdaddr = rewriter.create<comb::ExtractOp>(op->getLoc(), rdaddr, 0,
                                                 int(log2(this->depth)));
       this->locOp = rdaddr.getDefiningOp();
     }
-    if (wraddr.getType().getIntOrFloatBitWidth() < int(log2(this->depth))) {
+    if (static_cast<int>(wraddr.getType().getIntOrFloatBitWidth()) <
+        int(log2(this->depth))) {
       llvm::SmallVector<mlir::Value> constantVec;
-      for (int i = 0; i < int(log2(this->depth)) -
-                              wraddr.getType().getIntOrFloatBitWidth();
+      for (int i = 0;
+           i < int(log2(this->depth)) -
+                   static_cast<int>(wraddr.getType().getIntOrFloatBitWidth());
            i++) {
         constantVec.emplace_back(constant0);
       }
       constantVec.emplace_back(wraddr);
       wraddr = rewriter.create<comb::ConcatOp>(op->getLoc(), constantVec);
       this->locOp = wraddr.getDefiningOp();
-    } else if (wraddr.getType().getIntOrFloatBitWidth() >
+    } else if (static_cast<int>(wraddr.getType().getIntOrFloatBitWidth()) >
                int(log2(this->depth))) {
       wraddr = rewriter.create<comb::ExtractOp>(op->getLoc(), wraddr, 0,
                                                 int(log2(this->depth)));
@@ -627,34 +641,38 @@ private:
     mlir::Value rdaddra = readOp.getAddress();
     mlir::Value wraddra = writeOp.getAddress();
 
-    if (rdaddra.getType().getIntOrFloatBitWidth() < int(log2(this->depth))) {
+    if (static_cast<int>(rdaddra.getType().getIntOrFloatBitWidth()) <
+        int(log2(this->depth))) {
       llvm::SmallVector<mlir::Value> constantVec;
-      for (int i = 0; i < int(log2(this->depth)) -
-                              rdaddra.getType().getIntOrFloatBitWidth();
+      for (int i = 0;
+           i < int(log2(this->depth)) -
+                   static_cast<int>(rdaddra.getType().getIntOrFloatBitWidth());
            i++) {
         constantVec.emplace_back(constant0);
       }
       constantVec.emplace_back(rdaddra);
       rdaddra = rewriter.create<comb::ConcatOp>(op->getLoc(), constantVec);
       this->locOp = rdaddra.getDefiningOp();
-    } else if (rdaddra.getType().getIntOrFloatBitWidth() >
+    } else if (static_cast<int>(rdaddra.getType().getIntOrFloatBitWidth()) >
                int(log2(this->depth))) {
       rdaddra = rewriter.create<comb::ExtractOp>(op->getLoc(), rdaddra, 0,
                                                  int(log2(this->depth)));
       this->locOp = rdaddra.getDefiningOp();
     }
 
-    if (wraddra.getType().getIntOrFloatBitWidth() < int(log2(this->depth))) {
+    if (static_cast<int>(wraddra.getType().getIntOrFloatBitWidth()) <
+        int(log2(this->depth))) {
       llvm::SmallVector<mlir::Value> constantVec;
-      for (int i = 0; i < int(log2(this->depth)) -
-                              wraddra.getType().getIntOrFloatBitWidth();
+      for (int i = 0;
+           i < int(log2(this->depth)) -
+                   static_cast<int>(wraddra.getType().getIntOrFloatBitWidth());
            i++) {
         constantVec.emplace_back(constant0);
       }
       constantVec.emplace_back(wraddra);
       wraddra = rewriter.create<comb::ConcatOp>(op->getLoc(), constantVec);
       this->locOp = wraddra.getDefiningOp();
-    } else if (wraddra.getType().getIntOrFloatBitWidth() >
+    } else if (static_cast<int>(wraddra.getType().getIntOrFloatBitWidth()) >
                int(log2(this->depth))) {
       wraddra = rewriter.create<comb::ExtractOp>(op->getLoc(), wraddra, 0,
                                                  int(log2(this->depth)));
@@ -684,65 +702,65 @@ private:
     builder.setInsertionPointToStart(op.getBody());
     StringAttr moduleName = builder.getStringAttr("RAMB36E2");
     SmallVector<hw::PortInfo> ports;
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("CLKARDCLK"),
-                                    seq::ClockType::get(&context),
-                                    hw::ModulePort::Direction::Input});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("CLKARDCLK"),
+                                     seq::ClockType::get(&context),
+                                     hw::ModulePort::Direction::Input}});
     // Port A configuration
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("ADDRARDADDR"),
-                                    builder.getIntegerType(15),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("ENARDEN"),
-                                    builder.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("DINADIN"),
-                                    builder.getIntegerType(32),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("DINPADINP"),
-                                    builder.getIntegerType(4),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("DOUTADOUT"),
-                                    builder.getIntegerType(32),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("DOUTPADOUTP"),
-                                    builder.getIntegerType(4),
-                                    hw::ModulePort::Direction::Output});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("ADDRARDADDR"),
+                                     builder.getIntegerType(15),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("ENARDEN"),
+                                     builder.getIntegerType(1),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("DINADIN"),
+                                     builder.getIntegerType(32),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("DINPADINP"),
+                                     builder.getIntegerType(4),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("DOUTADOUT"),
+                                     builder.getIntegerType(32),
+                                     hw::ModulePort::Direction::Output}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("DOUTPADOUTP"),
+                                     builder.getIntegerType(4),
+                                     hw::ModulePort::Direction::Output}});
     // Port B configuration
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("CLKBWRCLK"),
-                                    seq::ClockType::get(&context),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("ADDRBWRADDR"),
-                                    builder.getIntegerType(15),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("ENBWREN"),
-                                    builder.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("DINBDIN"),
-                                    builder.getIntegerType(32),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("DINPBDINP"),
-                                    builder.getIntegerType(4),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("DOUTBDOUT"),
-                                    builder.getIntegerType(32),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("DOUTPBDOUTP"),
-                                    builder.getIntegerType(4),
-                                    hw::ModulePort::Direction::Output});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("RSTRAMARSTRAM"),
-                                    builder.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("RSTREGARSTREG"),
-                                    builder.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("REGCEAREGCE"),
-                                    builder.getIntegerType(1),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("WEA"),
-                                    builder.getIntegerType(4),
-                                    hw::ModulePort::Direction::Input});
-    ports.emplace_back(hw::PortInfo{builder.getStringAttr("WEBWE"),
-                                    builder.getIntegerType(8),
-                                    hw::ModulePort::Direction::Input});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("CLKBWRCLK"),
+                                     seq::ClockType::get(&context),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("ADDRBWRADDR"),
+                                     builder.getIntegerType(15),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("ENBWREN"),
+                                     builder.getIntegerType(1),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("DINBDIN"),
+                                     builder.getIntegerType(32),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("DINPBDINP"),
+                                     builder.getIntegerType(4),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("DOUTBDOUT"),
+                                     builder.getIntegerType(32),
+                                     hw::ModulePort::Direction::Output}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("DOUTPBDOUTP"),
+                                     builder.getIntegerType(4),
+                                     hw::ModulePort::Direction::Output}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("RSTRAMARSTRAM"),
+                                     builder.getIntegerType(1),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("RSTREGARSTREG"),
+                                     builder.getIntegerType(1),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(hw::PortInfo{{builder.getStringAttr("REGCEAREGCE"),
+                                     builder.getIntegerType(1),
+                                     hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{builder.getStringAttr("WEA"), builder.getIntegerType(4),
+                      hw::ModulePort::Direction::Input}});
+    ports.emplace_back(
+        hw::PortInfo{{builder.getStringAttr("WEBWE"), builder.getIntegerType(8),
+                      hw::ModulePort::Direction::Input}});
     auto externmodule =
         builder.create<hw::HWModuleExternOp>(op->getLoc(), moduleName, ports);
     SmallVector<Attribute> params;
@@ -788,7 +806,7 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
   // Handle small BRAM memory
   void handleSmallBram(seq::FirMemOp op, OpAdaptor adaptor,
                        ConversionPatternRewriter &rewriter, int index,
-                       CreateInstance &Bram) const {
+                       CreateInstance &bram) const {
     while (bitSize > portSizeArray[index]) {
       index++;
     }
@@ -800,7 +818,7 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     this->portSize = portsize;
     this->extractSize = -1;
     instanceOp =
-        Bram.instanceBlockRam(op, rewriter, portSize, extractSize, RAMB36E2);
+        bram.instanceBlockRam(op, rewriter, portSize, extractSize, blockRam);
     auto instV = instanceOp.first.getResult(0);
 
     // Adjust the result according to bit width
@@ -851,14 +869,14 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
                        int totalSize, int sliceIndex,
                        std::vector<mlir::Value> &instValue,
                        std::vector<std::pair<Operation *, int>> &instUses,
-                       CreateInstance &Bram) const {
+                       CreateInstance &bram) const {
     hw::InstanceOp instanceop;
     seq::FirMemReadWriteOp readWriteOp;
     this->portSize = maxBitsize;
     this->extractSize = sliceIndex * maxBitsize;
 
     std::tie(instanceop, readWriteOp) =
-        Bram.instanceBlockRam(op, rewriter, portSize, extractSize, RAMB36E2);
+        bram.instanceBlockRam(op, rewriter, portSize, extractSize, blockRam);
     // Collect usage information
     if (instUses.empty()) {
       for (auto &uses : readWriteOp->getUses()) {
@@ -894,7 +912,7 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
   // Handle large BRAM memory
   void handleLargeBram(seq::FirMemOp op, OpAdaptor adaptor,
                        ConversionPatternRewriter &rewriter, int index,
-                       CreateInstance &Bram) const {
+                       CreateInstance &bram) const {
     // Calculate appropriate bit width
     int maxBitsize = 36864.0 / depth;
     while (maxBitsize > portSizeArray[index]) {
@@ -917,7 +935,7 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     // Create BRAM instance for each slice
     for (int i = 0; i < bramSize; i++) {
       createBramSlice(op, adaptor, rewriter, maxBitsize, totalSize, i,
-                      instValue, instUses, Bram);
+                      instValue, instUses, bram);
       totalSize -= maxBitsize;
     }
 
@@ -943,15 +961,15 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     bitSize = op.getType().getWidth();
     depth = op.getType().getDepth();
 
-    CreateInstance Bram(module, bitSize, depth);
+    CreateInstance bram(module, bitSize, depth);
     // For small memory and standard sizes, use simple processing logic
     if (!(bitSize * depth > 36864 || bitSize > 36)) {
-      handleSmallBram(op, adaptor, rewriter, index, Bram);
+      handleSmallBram(op, adaptor, rewriter, index, bram);
       return;
     }
 
     // Handle large memory and non-standard sizes
-    handleLargeBram(op, adaptor, rewriter, index, Bram);
+    handleLargeBram(op, adaptor, rewriter, index, bram);
   }
 
   void setDistRam(seq::FirMemOp op, OpAdaptor adaptor,
@@ -982,11 +1000,11 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
       assert(false && "writeOp is null");
     }
     rewriter.setInsertionPointAfter(writeOp);
-    CreateInstance Dist(module, bitSize, this->depth);
-    for (int i = 0; i < op.getType().getWidth(); i++) {
-      Dist.InstanceDistRam(bitSize, i, readOp, writeOp, op, rewriter, dramMap);
+    CreateInstance dist(module, bitSize, this->depth);
+    for (int i = 0; i < static_cast<int>(op.getType().getWidth()); i++) {
+      dist.instanceDistRam(bitSize, i, readOp, writeOp, op, rewriter, dramMap);
     }
-    auto dramResult = Dist.getDramResult();
+    auto dramResult = dist.getDramResult();
     std::reverse(dramResult.begin(), dramResult.end());
     auto resultOp = rewriter.create<comb::ConcatOp>(op->getLoc(), dramResult);
     rewriter.replaceAllUsesWith(readOp, resultOp.getResult());
@@ -1015,7 +1033,7 @@ private:
   mutable int depth = 0;
   mutable int portSize = 0;
   mutable int extractSize = 0;
-  mutable hw::HWModuleExternOp RAMB36E2;
+  mutable hw::HWModuleExternOp blockRam;
   mutable llvm::DenseMap<int, hw::HWModuleExternOp> dramMap;
   int portSizeArray[6] = {1, 2, 4, 9, 18, 36};
   int depthArray[4] = {32, 64, 128, 256};
