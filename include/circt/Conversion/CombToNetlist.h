@@ -6,16 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header file defines prototypes that expose the HWToNetlist pass
+// This header file defines prototypes that expose the CombToNetlist pass
 // constructors.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef CIRCT_CONVERSION_HWTONETLIST_HWTONETLIST_H
 #define CIRCT_CONVERSION_HWTONETLIST_HWTONETLIST_H
-
-#include "circt/Dialect/HW/HWTypes.h"
-#include <memory>
 
 namespace mlir {
 template <typename T>
@@ -30,18 +27,18 @@ class HWModuleOp;
 
 namespace circt {
 
-#define GEN_PASS_DECL_LOWERHWTONETLIST
+#define GEN_PASS_DECL_LOWERCOMBTONETLIST
 #include "circt/Conversion/Passes.h.inc"
 
 /// Get the HW to Netlist type conversions.
-// void populateHWToNetlistTypeConversions(FPGANetlistTypeConverter &converter);
+// void populateCombToNetlistTypeConversions(FPGANetlistTypeConverter &converter);
 
 /// Get the HW to Netlist conversion patterns.
-// void populateHWToNetlistConversionPatterns(
+// void populateCombToNetlistConversionPatterns(
 //     FPGANetlistTypeConverter &converter, RewritePatternSet &patterns);
 
 /// Create an HW to Netlist conversion pass.
-std::unique_ptr<OperationPass<hw::HWModuleOp>> createLowerHWToNetlistPass();
+std::unique_ptr<OperationPass<hw::HWModuleOp>> createLowerCombToNetlistPass();
 
 } // namespace circt
 

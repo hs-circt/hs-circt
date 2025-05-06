@@ -39,5 +39,5 @@ if(CIRCT_SLANG_FRONTEND_ENABLED)
 endif()
 
 if (CIRCT_LOGIC_SYN_ENABLED)
-  add_subdirectory(HWToNetlist)
+  add_subdirectory(CombToNetlist)
 endif()

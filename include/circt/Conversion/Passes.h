@@ -34,7 +34,7 @@
 #include "circt/Conversion/HWToLLVM.h"
 #include "circt/Conversion/HWToSMT.h"
 #include "circt/Conversion/HWToSV.h"
-#include "circt/Conversion/HWToNetlist.h"
+#include "circt/Conversion/CombToNetlist.h"
 #include "circt/Conversion/HWToSystemC.h"
 #include "circt/Conversion/HandshakeToDC.h"
 #include "circt/Conversion/HandshakeToHW.h"
