@@ -50,7 +50,7 @@ public:
   }
   std::pair<hw::InstanceOp, seq::FirMemReadWriteOp>
   instanceBlockRam(seq::FirMemOp op, ConversionPatternRewriter &rewriter,
-                   int portSize, int extractSize,
+                   int portSize, int extractPlace,
                    hw::HWModuleExternOp &blockRam) {
     llvm::SmallVector<mlir::Value> symbolInputs;
     llvm::SmallVector<seq::FirMemReadWriteOp> firmemops;
@@ -102,12 +102,20 @@ public:
           symbolInputs.emplace_back(readWriteOp.getEnable());
           mlir::Value writeData = readWriteOp.getWriteData();
           mlir::Value extractValue = writeData;
-          if (extractSize != -1) {
+          int extractSize = portSize;
+          if (portSize > 32) {
+            extractSize = 32;
+          } else if (portSize > 16 && portSize <= 18) {
+            extractSize = 16;
+          } else if (portSize == 9) {
+            extractSize = 8;
+          }
+          if (extractPlace != -1) {
             auto extrLength = std::min(
-                int(writeData.getType().getIntOrFloatBitWidth() - extractSize),
-                portSize);
+                int(writeData.getType().getIntOrFloatBitWidth()) - extractPlace,
+                extractSize);
             extractValue = rewriter.create<comb::ExtractOp>(
-                op->getLoc(), writeData, extractSize, extrLength);
+                op->getLoc(), writeData, extractPlace, extrLength);
             writeData = extractValue;
           }
           if (extractValue.getType().getIntOrFloatBitWidth() < 32) {
@@ -127,15 +135,14 @@ public:
           }
           symbolInputs.emplace_back(writeData);
           mlir::Value dipadi = constant04;
-          if ((bitSize > 32 || (bitSize > 16 && bitSize <= 18) ||
-               bitSize == 9) &&
-              readWriteOp.getMask() == nullptr) {
+          if ((portSize > 32 || (portSize > 16 && portSize <= 18) ||
+               portSize == 9) &&
+              readWriteOp.getMask() == nullptr &&
+              extractPlace + portSize < bitSize) {
             dipadi = rewriter.create<comb::ExtractOp>(
-                op->getLoc(), writeData, bitSize - bitSize % 8,
-                std::min(
-                    bitSize / 8,
-                    static_cast<int>(
-                        extractValue.getType().getIntOrFloatBitWidth() - 32)));
+                op->getLoc(), readWriteOp.getWriteData(),
+                std::max(extractPlace, 0) + portSize - portSize % 8,
+                int(portSize / 8));
             if (dipadi.getType().getIntOrFloatBitWidth() != 4) {
               llvm::SmallVector<Value> constantVector;
               for (int i = 0;
@@ -181,12 +188,12 @@ public:
           symbolInputs.emplace_back(readWriteOp.getEnable()); // enb
           mlir::Value writeData = readWriteOp.getWriteData();
           mlir::Value extractValue = writeData;
-          if (extractSize != -1) {
+          if (extractPlace != -1) {
             auto extrLength = std::min(
-                int(writeData.getType().getIntOrFloatBitWidth() - extractSize),
+                int(writeData.getType().getIntOrFloatBitWidth() - extractPlace),
                 portSize);
             extractValue = rewriter.create<comb::ExtractOp>(
-                op->getLoc(), writeData, extractSize, extrLength);
+                op->getLoc(), writeData, extractPlace, extrLength);
             writeData = extractValue;
           }
           if (extractValue.getType().getIntOrFloatBitWidth() < 32) {
@@ -253,9 +260,9 @@ public:
       SmallVector<Value> values = {constant0, constant0, constant0, constant0,
                                    weaValue,  weaValue,  weaValue,  weaValue};
       webValue = rewriter.create<comb::ConcatOp>(op->getLoc(), values);
-    } else if (extractSize != -1 && firmemops[0].getMask() != nullptr) {
+    } else if (extractPlace != -1 && firmemops[0].getMask() != nullptr) {
       weaValue = rewriter.createOrFold<comb::ExtractOp>(
-          op->getLoc(), firmemops[0].getMask(), extractSize / 8, portSize / 8);
+          op->getLoc(), firmemops[0].getMask(), extractPlace / 8, portSize / 8);
       if (weaValue.getType().getIntOrFloatBitWidth() < 4) {
         llvm::SmallVector<Value> constantVector;
         for (int i = 0; i < 4 - static_cast<int>(
@@ -540,14 +547,14 @@ private:
   }
   hw::InstanceOp use6bitRAM(seq::FirMemOp op,
                             ConversionPatternRewriter &rewriter,
-                            int extractSize, seq::FirMemReadOp readOp,
+                            int extractPlace, seq::FirMemReadOp readOp,
                             seq::FirMemWriteOp writeOp) {
     auto extractOp0 = rewriter.create<comb::ExtractOp>(
-        op->getLoc(), writeOp.getData(), extractSize, 2);
+        op->getLoc(), writeOp.getData(), extractPlace, 2);
     auto extractOp1 = rewriter.create<comb::ExtractOp>(
-        op->getLoc(), writeOp.getData(), extractSize + 2, 2);
+        op->getLoc(), writeOp.getData(), extractPlace + 2, 2);
     auto extractOp2 = rewriter.create<comb::ExtractOp>(
-        op->getLoc(), writeOp.getData(), extractSize + 4, 2);
+        op->getLoc(), writeOp.getData(), extractPlace + 4, 2);
 
     this->locOp = extractOp2;
     llvm::SmallVector<Value> symbolInputs;
@@ -620,13 +627,13 @@ private:
   hw::InstanceOp use3BitRAM(seq::FirMemOp op,
                             ConversionPatternRewriter &rewriter,
                             seq::FirMemReadOp readOp,
-                            seq::FirMemWriteOp writeOp, int extractSize) {
+                            seq::FirMemWriteOp writeOp, int extractPlace) {
     auto extractOp0 = rewriter.create<comb::ExtractOp>(
-        op->getLoc(), writeOp.getData(), extractSize, 1);
+        op->getLoc(), writeOp.getData(), extractPlace, 1);
     auto extractOp1 = rewriter.create<comb::ExtractOp>(
-        op->getLoc(), writeOp.getData(), extractSize + 1, 1);
+        op->getLoc(), writeOp.getData(), extractPlace + 1, 1);
     auto extractOp2 = rewriter.create<comb::ExtractOp>(
-        op->getLoc(), writeOp.getData(), extractSize + 2, 1);
+        op->getLoc(), writeOp.getData(), extractPlace + 2, 1);
 
     this->locOp = extractOp2;
     llvm::SmallVector<Value> symbolInputs;
@@ -693,7 +700,7 @@ private:
 
     return rewriter.create<hw::InstanceOp>(
         op->getLoc(), externOp,
-        rewriter.getStringAttr("RAM32M_" + std::to_string(moduleNum++)),
+        rewriter.getStringAttr("RAM64M_" + std::to_string(moduleNum++)),
         symbolInputs);
   }
   hw::HWModuleExternOp createModuleExtern(ModuleOp op, MLIRContext &context,
@@ -810,15 +817,22 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     while (bitSize > portSizeArray[index]) {
       index++;
     }
-    auto portsize = portSizeArray[index];
+    auto portSize = portSizeArray[index];
     bool hasdoutpadout =
         (bitSize > 32 || (bitSize > 16 && bitSize <= 18) || bitSize == 9);
 
     std::pair<hw::InstanceOp, seq::FirMemReadWriteOp> instanceOp;
-    this->portSize = portsize;
-    this->extractSize = -1;
+    // int portSize = portsize;
+    if (portSize > 32) {
+      portSize = 32;
+    } else if (portSize > 16 && portSize <= 18) {
+      portSize = 16;
+    } else if (portSize == 9) {
+      portSize = 8;
+    }
+    this->extractPlace = -1;
     instanceOp =
-        bram.instanceBlockRam(op, rewriter, portSize, extractSize, blockRam);
+        bram.instanceBlockRam(op, rewriter, portSize, extractPlace, blockRam);
     auto instV = instanceOp.first.getResult(0);
 
     // Adjust the result according to bit width
@@ -872,11 +886,11 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
                        CreateInstance &bram) const {
     hw::InstanceOp instanceop;
     seq::FirMemReadWriteOp readWriteOp;
-    this->portSize = maxBitsize;
-    this->extractSize = sliceIndex * maxBitsize;
+    int portSize = maxBitsize;
+    this->extractPlace = sliceIndex * maxBitsize;
 
     std::tie(instanceop, readWriteOp) =
-        bram.instanceBlockRam(op, rewriter, portSize, extractSize, blockRam);
+        bram.instanceBlockRam(op, rewriter, portSize, extractPlace, blockRam);
     // Collect usage information
     if (instUses.empty()) {
       for (auto &uses : readWriteOp->getUses()) {
@@ -885,17 +899,23 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
     }
 
     // Create data bits
-    mlir::Value instV =
-        rewriter.create<comb::ExtractOp>(op->getLoc(), instanceop.getResult(0),
-                                         0, std::min(maxBitsize, totalSize));
+    int extractPlace = std::min(maxBitsize, totalSize);
+    if (extractPlace > 32) {
+      extractPlace = 32;
+    } else if (extractPlace > 16 && extractPlace <= 18) {
+      extractPlace = 16;
+    } else if (extractPlace == 9) {
+      extractPlace = 8;
+    }
+    mlir::Value instV = rewriter.create<comb::ExtractOp>(
+        op->getLoc(), instanceop.getResult(0), 0, extractPlace);
     instValue.emplace_back(instV);
 
     // Create mask bits (if needed)
     bool needsMask = op.getMemory().getType().getMaskWidth() == std::nullopt &&
                      (maxBitsize == 9 ||
                       (maxBitsize > 16 && maxBitsize <= 18) || maxBitsize > 32);
-
-    if (needsMask) {
+    if (needsMask && totalSize >= maxBitsize) {
       int len = 0;
       if (maxBitsize == 9)
         len = 1;
@@ -1031,8 +1051,7 @@ struct FirMemOpConversion : public OpConversionPattern<seq::FirMemOp> {
 private:
   mutable int bitSize = 0;
   mutable int depth = 0;
-  mutable int portSize = 0;
-  mutable int extractSize = 0;
+  mutable int extractPlace = 0;
   mutable hw::HWModuleExternOp blockRam;
   mutable llvm::DenseMap<int, hw::HWModuleExternOp> dramMap;
   int portSizeArray[6] = {1, 2, 4, 9, 18, 36};
