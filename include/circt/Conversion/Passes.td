@@ -539,6 +539,23 @@ def ConvertMooreToCore : Pass<"convert-moore-to-core", "mlir::ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// CoreMemoryMapping
+//===----------------------------------------------------------------------===//
+
+def CoreMemoryMapping : Pass<"memory-mapping", "mlir::ModuleOp"> {
+  let summary = "Core Memory Mapping";
+  let description = [{
+    This pass map seq::FirMemOp into Xilinx UltraScale+ DistRam/BlockRam
+  }];
+  let constructor = "circt::createCoreMemoryMappingPass()";
+  let dependentDialects = [
+    "hw::HWDialect",
+    "comb::CombDialect",
+    "seq::SeqDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // HWToLLVM
 //===----------------------------------------------------------------------===//
 
